@@ -1,0 +1,43 @@
+#!/bin/tcsh
+
+setenv ALL_SUBJECT_DIR /mnt/hgfs/Y/COBRE_SCANS
+setenv ALL_RESULT_DIR /mnt/hgfs/Y/COBRE_SCANS/processed_COBRE_scan
+cd /mnt/hgfs/Y/COBRE_SCANS/excel_file_XZ
+
+set SUBJECT_NAME = `cat subject_id.txt`
+set bold_id = `cat fMRI_id.txt`
+set pe_bold = AP #{AP,AP,AP,AP,AP,AP,AP,AP,AP,AP,AP,AP,AP,AP}
+set pe_oppo = PA #{PA,PA,PA,PA,PA,PA,PA,PA,PA,PA,PA,PA,PA,PA}
+set timepoint = `cat TimePoint.txt`
+set session_id = `cat session_id.txt`
+set i = 1
+while ($i <= 25) 
+	setenv subject_path $ALL_SUBJECT_DIR/${SUBJECT_NAME[$i]}
+	setenv subject_result_path $ALL_RESULT_DIR/${SUBJECT_NAME[$i]}/$timepoint[$i]/rsfMRI
+	cd $subject_result_path
+	foreach run(${session_id[$i]}_${bold_id[$i]}_distortion_correction)
+		cd $subject_result_path/$run
+		setenv pe_bold_img1 *se_${pe_bold}*001.nii
+		setenv pe_bold_img2 *se_${pe_bold}*002.nii 
+		setenv pe_oppo_img1 *se_${pe_oppo}*001.nii 
+		setenv pe_oppo_img2 *se_${pe_oppo}*002.nii 
+		fslmerge -t pe_bold_pe_oppo_2_img.nii $pe_bold_img1 $pe_bold_img2 $pe_oppo_img1 $pe_oppo_img2 
+		topup --imain=pe_bold_pe_oppo_2_img.nii --datain=$ALL_SUBJECT_DIR/fmri_my_acq_par.txt --config=b02b0.cnf --out=topup_output
+# correct for mean image
+		setenv bold_run $subject_path/*${session_id[$i]}*${bold_id[$i]}*bold*
+		echo $bold_run
+		cd $bold_run
+		setenv mean_bold_file mean*.nii*
+		applytopup --imain=$mean_bold_file --inindex=1 --datain=$ALL_SUBJECT_DIR/fmri_my_acq_par.txt --topup=$subject_result_path/$run/topup_output --method=jac --interp=spline --out=$bold_run/corr_$mean_bold_file
+# correct for bold image
+		setenv intermediate_run $bold_run/intermediate
+		cd $intermediate_run
+		foreach bold_file(r*.nii)
+			applytopup --imain=$bold_file --inindex=1 --datain=$ALL_SUBJECT_DIR/fmri_my_acq_par.txt --topup=$subject_result_path/$run/topup_output --method=jac --interp=spline --out=$intermediate_run/corr_$bold_file
+		end
+	end
+	@ i++	
+end
+
+
+
