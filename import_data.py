@@ -1,14 +1,15 @@
-
 import nibabel as nib
 import os
-import nilearn as nil
+import numpy as np
 
 #The current path of the data
-path = 'Z:\COBRE_SCANS/013/105780795_012_cmrr_mbep2d_bold_AP_MB8_2mm_ISO_20170908/intermediate'
-if os.path.exists("Z:/COBRE_SCANS/013/105780795_012_cmrr_mbep2d_bold_AP_MB8_2mm_ISO_20170908/intermediate"):
-    os.chdir("Z:/COBRE_SCANS/013/105780795_012_cmrr_mbep2d_bold_AP_MB8_2mm_ISO_20170908/intermediate")
+#I'm not able to automate this as of now because I'm not able to get to iterate over the directories
+path = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48'
+if os.path.exists("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48"):
+    os.chdir("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48")
 else:
     print("Current working directory doesn't exist")
+#Appending the fMRI time series and removing the first five volumes
 newlist=[]
 for files in os.listdir():
     if files.endswith(".nii"):
@@ -18,26 +19,41 @@ for files in os.listdir():
 for i in range(len(newlist)-1,-1,-1):
     if newlist[i].startswith(('s','r')):
         del(newlist[i])
+#Sorting the list of nii files in the ascending order of their names
 newlist.sort()
-for i in range(5):
-    newlist.pop(0)
-img_cat = nil.image.concat_imgs(newlist)
-nii4D = nib.concat_images(newlist)
+#for i in range(5):
+ #   newlist.pop(0)
+img_cat = nib.concat_images(newlist)
+save_path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+nib.save(img_cat,os.path.join(save_path,'MNI-048.nii'))
+del newlist, img_cat
 
-newlist1=[];
-dir_path = 'Z:/COBRE_SCANS/008'
-subdir_inc = 'intermediate'
-for root, dirs, files in os.walk('Z:/COBRE_SCANS/008/'):
-    if dir == 'intermediate':
-        print(dir)
+#Loading all the 4d nii files
+os.chdir('C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI')
+nii_list=[]
+for file in os.listdir():
+    if file.endswith(".nii"):
+        nii_list.append(file)
+#Sorting of the files names
+nii_list.sort()
 
+#Temporal concatenation of the data
+length = len(nii_list)
+n_voxels = []
+n_trs = []
+tempcat_mat = np.zeros((length,850))
 
+for i in range(length):
+    pat_img = nib.load(nii_list[i])
+    n_voxels = np.prod(pat_img.shape[:-1])
+    n_trs = pat_img.shape[-1]
+    data = pat_img.get_fdata()
+    #n_voxels.append()
+    #n_trs.append()
+    voxtime_mat = data.reshape((n_voxels, n_trs))
+    tempcat_mat[i] = np.std(voxtime_mat, axis=0)
 
-    for file in filelist:
-        if file.endswith(".nii"):
-                newlist1.append(file)
-    for dir1 in subdir_inc:
-        print(dir1)
-os.getcwd()
+del pat_img, data, n_voxels, n_trs, nii_list
+del tempcat_mat
+del length
 
-del img_cat
