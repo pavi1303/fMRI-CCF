@@ -41,8 +41,8 @@ nii_list.sort()
 length = len(nii_list)
 n_voxels = []
 n_trs = []
-tempcat_mat = np.zeros((length,850))
-
+#tempcat_mat = np.zeros((length,850))
+tempcat_mat =[]
 for i in range(length):
     pat_img = nib.load(nii_list[i])
     n_voxels = np.prod(pat_img.shape[:-1])
@@ -51,9 +51,56 @@ for i in range(length):
     #n_voxels.append()
     #n_trs.append()
     voxtime_mat = data.reshape((n_voxels, n_trs))
-    tempcat_mat[i] = np.std(voxtime_mat, axis=0)
+    #tempcat_mat[i] = np.std(voxtime_mat, axis=0)
+    tempcat_mat.append([voxtime_mat])
 
-del pat_img, data, n_voxels, n_trs, nii_list
-del tempcat_mat
-del length
+#ICA_mat = tempcat_mat.transpose()
 
+#Preprocesing for ICA analysis
+#1.Centering of the data
+def center_mean(x):
+    mean = np.mean(x, axis=1, keepdims=True)
+    centered =  x - mean
+    return centered, mean
+#2. Whitening operation based on covariance matrix
+#Caclulation of the covariance matrix based on Eigen Value Decomposition
+def cov(x):
+    mean = np.mean(x, axis=1, keepdims=True)
+    n = np.shape(x)[1]-1
+    m = x - mean
+    return (m.dot(m.T))/n
+
+def whiten(x):
+    # Calculate the covariance matrix
+    coVarM = cov(X)
+    # Single value decomposition
+    U, S, V = np.linalg.svd(coVarM)
+    # Calculate diagonal matrix of eigenvalues
+    d = np.diag(1.0 / np.sqrt(S))
+    # Calculate whitening matrix
+    whiteM = np.dot(U, np.dot(d, U.T))
+    # Project onto whitening matrix
+    Xw = np.dot(whiteM, X)
+    return Xw, whiteM
+
+#Preprocessing of the signals
+#Cener the signals
+Xc, meanX = center_mean(arr3)
+#Whiten the signals
+Xw, whitenM = whiten(Xc)
+
+
+
+
+
+
+
+
+
+arr1 = voxtime_mat
+arr2 = voxtime_mat
+# Concatenating operation
+# axis = 0 implies that it is being done row-wise
+arr3 = (np.concatenate((arr1, arr2), axis=1)).transpose()
+ICA_mat = arr3.transpose()
+del ICA_mat
