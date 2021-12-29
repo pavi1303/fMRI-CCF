@@ -1,7 +1,7 @@
 import nibabel as nib
 import os
 import numpy as np
-
+from sklearn.decomposition import FastICA
 # The current path of the data
 # I'm not able to automate this as of now because I'm not able to get to iterate over the directories
 path = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48'
@@ -116,3 +116,5 @@ del ICA_mat1
 ICA_mat = voxtime_mat
 del voxtime_mat
 
+fastica = FastICA(n_components=3, whiten=False)
+S_ = fastica.fit_transform(ICA_mat)
