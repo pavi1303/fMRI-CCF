@@ -1,55 +1,69 @@
-import nilearn as nil
-import numpy as np
-import matplotlib.pyplot as plt
-import nibabel as nib
 import os
-import pandas as pd
-from nilearn import datasets
+import numpy as np
+import nibabel as nib
 
-#Importing datasets
-rs_dataset = datasets.fetch_development_fmri(n_subjects=5)
-func_filenames = rs_dataset.func
+#---------------------------FUNCTIONS--------------------------------------#
+#------------------Import and concat the nii files-------------------------#
+def nii_concat(input_path, save_path):
+    for dirpath,dirs, filenames in os.walk(input_path):
+        for subdir in dirs:
+            niilist = []
+            subpath = os.path.join(input_path, subdir)
+            if os.path.exists(subpath):
+                os.chdir(subpath)
+            else:
+                print("Current working directory doesn't exist")
+            for files in os.listdir():
+                if files.endswith(".nii"):
+                    niilist.append(files)
+            imgcat = nib.concat_images(niilist)
+            nib.save(imgcat,os.path.join(save_path,'MNI-'+subdir+'.nii'))
+            del imgcat
+#-------------------Temporal concatenation of the data--------------------#
+def temporal_concat(location):
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    list_of_nii=[]
+    for files in os.listdir():
+        if files.endswith(".nii"):
+            list_of_nii.append(files)
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,902629])
+    for i in range(length):
+        pat_img = nib.load(list_of_nii[i])
+        n_voxels = np.prod(pat_img.shape[:-1])
+        n_trs = pat_img.shape[-1]
+        data = pat_img.get_fdata()
+        voxtime_dat = (data.reshape((n_voxels, n_trs))).transpose()
+        tempcat_dat = np.append(tempcat_dat, voxtime_dat, axis=0)
+        del pat_img,n_voxels,n_trs,data, voxtime_dat
+    tempcat_dat = np.delete(tempcat_dat,0,0)
+    return tempcat_dat
+#------------------Preprocessing for multi-subject ICA-------------------#
+def center_mean(x):
+    mean = np.mean(x, axis=0, keepdims=True)
+    centered = x - mean
+    return centered, mean
+# 2. Whitening operation based on covariance matrix
+def cov(x):
+    mean = np.mean(x, axis=0, keepdims=True)
+    n = np.shape(x)[1] - 1
+    m = x - mean
+    return (m.dot(m.T)) / n
+def whiten(x):
+    coVarM = cov(x)
+    U, S, V = np.linalg.svd(coVarM)
+    d = np.diag(1.0 / np.sqrt(S))
+    whiteM = np.dot(U, np.dot(d, U.T))
+    Xw = np.dot(whiteM, x)
+    return Xw, whiteM
 
-img_sample = nib.load('ds114_sub009_t2r1.nii')
-n_voxels = np.prod(img_sample.shape[:-1])
-n_trs = img_sample.shape[-1]
-data = img_sample.get_data()
-std_devs = []
-for vol_no in range(n_trs):
-   vol = data[..., vol_no]
-   std_devs.append(np.std(vol))
+source = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset'
+destination = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/mni'
 
-plt.plot(std_devs)
-voxels_by_time = data.reshape((n_voxels, n_trs))
-std_devs_vectorized = np.std(voxels_by_time, axis=0)
-assert np.allclose(std_devs_vectorized, std_devs)
+nii_concat(source,destination)
+ICA_mat = temporal_concat(destination)
 
-#Trial 1 of importing all the docs
-sub_id = str(8).zfill(3)
-dir_path = 'Z:/COBRE_SCANS/008'
-sub_path = 'sub_id'
-path = os.path.join(dir_path,sub_path)
-subdir = ''
-
-
-for root, subdirs, files in os.walk('Z:/COBRE_SCANS/008'):
-    for d in subdirs:
-        if
-pat_id = [8,13,23]
-pat_id1 = str(pat_id)
-pat_id_str = pat_id1.zfill(4)
-subdir_list=[]
-subdir_
-for root, subdirectories, files in os.walk(dir_path):
-    for subdirectory in subdirectories:
-        print(os.path.join(root, subdirectory))
-
-#Trial 2
-basepath = 'Z:/COBRE_SCANS/008'
-str_pat = 'cmrr_mbep2d_bold_AP_MB8_2mm_ISO'
-
-for pattern in os.listdir(basepath):
-    path = os.path.join(basepath,pattern)
-    if os.path.isdir(path):
-        if pattern == str_pat:
-            print(path)
+os.getcwd()
