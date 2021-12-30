@@ -4,9 +4,9 @@ import numpy as np
 from sklearn.decomposition import FastICA
 # The current path of the data
 # I'm not able to automate this as of now because I'm not able to get to iterate over the directories
-path = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48'
-if os.path.exists("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48"):
-    os.chdir("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/48")
+path = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/sub_id_48'
+if os.path.exists("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/sub_id_48"):
+    os.chdir("C:/Users/PATTIAP/Desktop/Dataset/MNI dataset/sub_id_48")
 else:
     print("Current working directory doesn't exist")
 # Appending the fMRI time series and removing the first five volumes
@@ -39,23 +39,30 @@ nii_list.sort()
 
 # Temporal concatenation of the data
 length = len(nii_list)
+init_time=902629
+init_sources=850
+all_data = np.empty([init_sources, init_time])
+all_data[:] = np.nan
+cnt = 0
 n_voxels = []
 n_trs = []
 tempcat_mat = np.zeros((np.multiply(n_trs,length),902629))
-tempcat_mat = np.array([],[])
-i=0
+tempcat_mat = np.empty([850,902629])
+i=1
 for i in range(length):
     pat_img = nib.load(nii_list[i])
     n_voxels = np.prod(pat_img.shape[:-1])
     n_trs = pat_img.shape[-1]
     data = pat_img.get_fdata()
-    # n_voxels.append()
-    # n_trs.append()
     voxtime_mat = (data.reshape((n_voxels, n_trs))).transpose()
     # tempcat_mat[i] = np.std(voxtime_mat, axis=0)
     #tempcat_mat.append([voxtime_mat])
-    tempcat_mat = np.append(tempcat_mat,voxtime_mat)
+    tempcat_mat = np.append(tempcat_mat,voxtime_mat,axis=0)
 
+tempcat_mat1 = tempcat_mat
+ICA_mat = tempcat_mat1[850:5100:1]
+all_data[0:n_voxels, cnt:(cnt + voxtime_mat.shape[1])] = voxtime_mat
+    cnt += data.shape[1]
 
 ICA_mat = np.concatenate((tempcat_mat[0,:],tempcat_mat[1,:]), axis=0)
 
@@ -118,3 +125,9 @@ del voxtime_mat
 
 fastica = FastICA(n_components=3, whiten=False)
 S_ = fastica.fit_transform(ICA_mat)
+
+
+
+# Trial trial trial
+sub_dir = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+fid = open(sub_dir,'r')
