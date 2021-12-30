@@ -131,3 +131,29 @@ S_ = fastica.fit_transform(ICA_mat)
 # Trial trial trial
 sub_dir = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 fid = open(sub_dir,'r')
+
+#Function for accessing all the nii data and then temporally concatenating them
+def tempcat(location):
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    list_of_nii=[]
+    for files in os.listdir():
+        if files.endswith(".nii"):
+            list_of_nii.append(files)
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,902629])
+
+    for i in range(length):
+    pat_img = nib.load(list_of_nii[i])
+    n_voxels = np.prod(pat_img.shape[:-1])
+    n_trs = pat_img.shape[-1]
+    data = pat_img.get_fdata()
+    voxtime_dat = (data.reshape((n_voxels, n_trs))).transpose()
+    tempcat_dat = np.append(tempcat_dat, voxtime_dat, axis=0)
+    return tempcat_dat
+
+
+path = 'C:/Users/PATTIAP/Desktop/Dataset/fMRI_MNI_sample'
+ICA_mat = tempcat(path)
