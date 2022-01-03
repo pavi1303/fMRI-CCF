@@ -65,24 +65,19 @@ all_data[0:n_voxels, cnt:(cnt + voxtime_mat.shape[1])] = voxtime_mat
     cnt += data.shape[1]
 
 ICA_mat = np.concatenate((tempcat_mat[0,:],tempcat_mat[1,:]), axis=0)
-
+#-------------------------  ------------------- FUNCTIONS ------------------------------------------------------------#
 # Preprocessing for ICA analysis - This is working perfectly fine
 # 1.Centering of the data
 def center_mean(x):
     mean = np.mean(x, axis=0, keepdims=True)
     centered = x - mean
     return centered, mean
-
-
 # 2. Whitening operation based on covariance matrix
-# Caclulation of the covariance matrix based on Eigen Value Decomposition
 def cov(x):
     mean = np.mean(x, axis=0, keepdims=True)
     n = np.shape(x)[1] - 1
     m = x - mean
     return (m.dot(m.T)) / n
-
-
 def whiten(x):
     # Calculate the covariance matrix
     coVarM = cov(x)
@@ -96,7 +91,26 @@ def whiten(x):
     Xw = np.dot(whiteM, x)
     return Xw, whiteM
 
+def tempcat(location):
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    list_of_nii=[]
+    for files in os.listdir():
+        if files.endswith(".nii"):
+            list_of_nii.append(files)
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,902629])
 
+    for i in range(length):
+    pat_img = nib.load(list_of_nii[i])
+    n_voxels = np.prod(pat_img.shape[:-1])
+    n_trs = pat_img.shape[-1]
+    data = pat_img.get_fdata()
+    voxtime_dat = (data.reshape((n_voxels, n_trs))).transpose()
+    tempcat_dat = np.append(tempcat_dat, voxtime_dat, axis=0)
+    return tempcat_dat
 # Preprocessing of the signals
 # Cener the signals
 Xc, meanX = center_mean(ICA_mat)
@@ -133,27 +147,27 @@ sub_dir = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 fid = open(sub_dir,'r')
 
 #Function for accessing all the nii data and then temporally concatenating them
-def tempcat(location):
-    if os.path.exists(location):
-        os.chdir(location)
-    else:
-        print("Current working directory doesn't exist")
-    list_of_nii=[]
-    for files in os.listdir():
-        if files.endswith(".nii"):
-            list_of_nii.append(files)
-    length = len(list_of_nii)
-    tempcat_dat = np.empty([1,902629])
 
-    for i in range(length):
-    pat_img = nib.load(list_of_nii[i])
-    n_voxels = np.prod(pat_img.shape[:-1])
-    n_trs = pat_img.shape[-1]
-    data = pat_img.get_fdata()
-    voxtime_dat = (data.reshape((n_voxels, n_trs))).transpose()
-    tempcat_dat = np.append(tempcat_dat, voxtime_dat, axis=0)
-    return tempcat_dat
 
 
 path = 'C:/Users/PATTIAP/Desktop/Dataset/fMRI_MNI_sample'
 ICA_mat = tempcat(path)
+
+#Trial for january 3 - check if means and the covariance are calculated along the right axis
+path = 'C:/Users/PATTIAP/Downloads/trial'
+os.chdir(path)
+img = nib.load('ds114_sub009_t2r1.nii')
+
+data = img.get_fdata()
+
+n_voxels = np.prod(img.shape[:-1])
+n_trs = img.shape[-1]
+arr = (data.reshape((n_voxels, n_trs))).T
+row_means = np.outer(np.mean(arr, axis=1), np.ones(n_voxels))
+X = arr - row_means
+unscaled_covariance = X.dot(X.T)
+U, S, VT = np.linalg.svd(unscaled_covariance)
+#My functions
+X1 = center_mean(arr)
+coVarM = cov(X1)
+U1, S1, V1 = np.linalg.svd(coVarM)
