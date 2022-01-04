@@ -38,9 +38,17 @@ def temporal_concat(location):
         data = pat_img.get_fdata()
         voxtime_dat = (data.reshape((n_voxels, n_trs))).transpose()
         tempcat_dat = np.append(tempcat_dat, voxtime_dat, axis=0)
+        voxtime_dat = (data.reshape((n_voxels, n_trs))).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str((i+1)) + "...")
+        #PCA_red = _do_PCA(voxtime_dat,n_comp)
+        PCA_bi = PCA(n_components=n_comp,whiten=True)
+        PCA_red = (PCA_bi.fit_transform(voxtime_dat.T)).T
+        print("Performing temporal concatenation of subject " + str((i+1)) + "...")
+        tempcat_dat = np.append(tempcat_dat, PCA_red, axis=0)
         del pat_img,n_voxels,n_trs,data, voxtime_dat
     tempcat_dat = np.delete(tempcat_dat,0,0)
     return tempcat_dat
+
 #------------------Preprocessing for multi-subject ICA-------------------#
 def center_mean(x):
     mean = np.mean(x, axis=0, keepdims=True)
@@ -59,6 +67,214 @@ def whiten(x):
     whiteM = np.dot(U, np.dot(d, U.T))
     Xw = np.dot(whiteM, x)
     return Xw, whiteM
+
+# DO GROUP ICA
+def _do_ICA(threshold,x,n_comp,z_score = None,thresh_method='min'):
+    from sklearn.decomposition import FastICA
+    ICA = FastICA(n_components=n_comp,whiten=False, algorithm="parallel",max_iter=1000)
+    ica = ICA.fit_transform(x.T).T
+    if z_score == True:
+        ica -= ica.mean(axis=0)
+        ica /= ica.std(axis=0)
+    else:
+        pass
+    if thresh_method == 'min':
+        ica[np.abs(ica)<threshold]=0
+    elif thresh_method == 'max':
+        ica[np.abs(ica)>threshold]=0
+    else:
+        pass
+    return ica
+
+path = 'C:/Users/pavig/Downloads/Nii_trial/New folder'
+components = 50
+voxels = 143360
+
+pca_tcat = temporal_concat(path, components,voxels)
+ICA = FastICA(n_components=30,whiten=False, algorithm="parallel",max_iter=1000)
+ica = ICA.fit_transform(pca_tcat.T).T
+
+
+
+pca_mat = center_mean(pca_tcat)
+pca_whiten = whiten(pca_mat)
+ICA_premat = pca_whiten[0]
+
+ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> Stashed changes
 
 source = 'C:/Users/PATTIAP/Desktop/Dataset/MNI dataset'
 destination = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/mni'
