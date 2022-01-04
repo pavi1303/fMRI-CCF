@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
+from scipy.io import savemat
 # CONCATENATION OF NII FILES
 def nii_concat(input_path, save_path):
     for dirpath,dirs, filenames in os.walk(input_path):
@@ -74,7 +75,7 @@ def temporal_concat(location,n_comp,n_vxl):
         voxtime_dat = (data.reshape((n_voxels, n_trs))).T
         print("Performing PCA using " + str(n_comp) + " components for subject " + str((i+1)) + "...")
         #PCA_red = _do_PCA(voxtime_dat,n_comp)
-        PCA_bi = PCA(n_components=n_comp)
+        PCA_bi = PCA(n_components=n_comp,whiten=True)
         PCA_red = (PCA_bi.fit_transform(voxtime_dat.T)).T
         print("Performing temporal concatenation of subject " + str((i+1)) + "...")
         tempcat_dat = np.append(tempcat_dat, PCA_red, axis=0)
@@ -99,28 +100,35 @@ def _do_ICA(threshold,x,n_comp,z_score = None,thresh_method='min'):
     else:
         pass
     return ica
+#Plotting function to decide on the number of principal components
+def _decide_PCA_comp (x):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    x_c = center_mean(x)
+    Cov_x = cov(x_c)
+    Ut, St, Vt = np.linalg.svd(Cov_x)
+    cumsum = np.cumsum(St/np.sum(St))
+    x_ax = range(1,len(cumsum)+1)
+    plt.plot(x_ax,cumsum)
+    plt.show()
+    plt.xlabel("Number of components")
+    plt.ylabel("Cumulative explained variance")
+    plt.xticks(x_ax)
+    plt.xlim([70,80])
 
-path = 'C:/Users/PATTIAP/Downloads/trial'
-components = 50
-voxels = 122880
-
+path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+components = 20
+voxels = 902629
 pca_tcat = temporal_concat(path, components,voxels)
-pca_mat = center_mean(pca_tcat)
-pca_whiten = whiten(pca_mat)
-ICA_premat = pca_whiten[0]
+savemat("pca_red.mat",{'pca_tcat':pca_tcat})
 
+from scipy.io import loadmat
+ica_mat = loadmat('ica_red.mat')
+ica_red_mat = ica_mat[3]
+_decide_PCA_comp(pca_tcat)
+ICA = FastICA(whiten=False)
+ica = ICA.fit_transform(pca_tcat.T).T
 ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
-
-
-
-
-
-
-
-
-
-
-
 
 
 

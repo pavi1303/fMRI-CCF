@@ -154,9 +154,9 @@ path = 'C:/Users/PATTIAP/Desktop/Dataset/fMRI_MNI_sample'
 ICA_mat = tempcat(path)
 
 #Trial for january 3 - check if means and the covariance are calculated along the right axis
-path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/mni'
+path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/Trial'
 os.chdir(path)
-img1 = nib.load('MNI-8.nii')
+img = nib.load('MNI-008.nii')
 
 data = img.get_fdata()
 vols_shape = data.shape[:-1]
@@ -204,3 +204,86 @@ from nilearn.input_data import NiftiMasker
 masker = NiftiMasker(memory='nilearn_cache', memory_level=1,
                      mask_strategy='epi', standardize=False)
 img1_masked = masker.fit_transform(img1)
+import os
+import nibabel as nib
+path = 'C:/Users/PATTIAP/Downloads/Eg_func_dataset'
+os.chdir(path)
+img1 = nib.load('sub-01_func_sub-01_task-onebacktask_run-02_bold.nii')
+
+del ica
+def temporal_concat(location,n_comp,n_vxl,final_ncomp):
+    from sklearn.decomposition import PCA
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    list_of_nii=[]
+    for files in os.listdir():
+        if files.endswith(".nii"):
+            list_of_nii.append(files)
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,n_vxl])
+    for i in range(length):
+        pat_img = nib.load(list_of_nii[i])
+        n_voxels = np.prod(pat_img.shape[:-1])
+        n_trs = pat_img.shape[-1]
+        data = pat_img.get_fdata()
+        voxtime_dat = (data.reshape((n_voxels, n_trs))).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str((i+1)) + "...")
+        #PCA_red = _do_PCA(voxtime_dat,n_comp)
+        PCA_i = PCA(n_components=n_comp,whiten=True)
+        PCA_red = (PCA_i.fit_transform(voxtime_dat.T)).T
+        print("Performing temporal concatenation of subject " + str((i+1)) + "...")
+        tempcat_dat = np.append(tempcat_dat, PCA_red, axis=0)
+        del pat_img,n_voxels,n_trs,data, voxtime_dat
+    print('Temporal concatenation -- DONE')
+    tempcat_dat = np.delete(tempcat_dat,0,0)
+    print("Performing PCA using " + str(final_ncomp) + "components for temporally concatenated matrix....")
+    PCA_f = PCA(n_components=final_ncomp,whiten=False)
+    PCA_red_f = (PCA_f.fit_transform(tempcat_dat.T)).T
+    print('Final PCA reduction done')
+    return PCA_red_f
+
+path = 'C:/Users/PATTIAP/Downloads/Eg_func_dataset'
+components = 50
+voxels = 143360
+comp_f = 10
+
+pca_cat = temporal_concat(path, components,voxels,comp_f)
+from sklearn.decomposition import FastICA
+ICA = FastICA(n_components=10,whiten=False,max_iter=1000,tol=0.1)
+ica = ICA.fit_transform(pca_tcat.T).T
+ica = ica[0:10,:]
+
+def temporal_concat(location,n_comp,n_vxl,final_ncomp):
+    from sklearn.decomposition import PCA
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    list_of_nii=[]
+    for files in os.listdir():
+        if files.endswith(".nii"):
+            list_of_nii.append(files)
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,n_vxl])
+    for i in range(length):
+        pat_img = nib.load(list_of_nii[i])
+        n_voxels = np.prod(pat_img.shape[:-1])
+        n_trs = pat_img.shape[-1]
+        data = pat_img.get_fdata()
+        voxtime_dat = (data.reshape((n_voxels, n_trs))).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str((i+1)) + "...")
+        #PCA_red = _do_PCA(voxtime_dat,n_comp)
+        PCA_i = PCA(n_components=n_comp,whiten=True)
+        PCA_red = (PCA_i.fit_transform(voxtime_dat.T)).T
+        print("Performing temporal concatenation of subject " + str((i+1)) + "...")
+        tempcat_dat = np.append(tempcat_dat, PCA_red, axis=0)
+        del pat_img,n_voxels,n_trs,data, voxtime_dat
+    print('Temporal concatenation -- DONE')
+    tempcat_dat = np.delete(tempcat_dat,0,0)
+    print("Performing PCA using " + str(final_ncomp) + "components for temporally concatenated matrix....")
+    PCA_f = PCA(n_components=final_ncomp,whiten=False)
+    PCA_red_f = (PCA_f.fit_transform(tempcat_dat.T)).T
+    print('Final PCA reduction done')
+    return PCA_red_f
