@@ -154,12 +154,12 @@ path = 'C:/Users/PATTIAP/Desktop/Dataset/fMRI_MNI_sample'
 ICA_mat = tempcat(path)
 
 #Trial for january 3 - check if means and the covariance are calculated along the right axis
-path = 'C:/Users/PATTIAP/Downloads/trial'
+path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/mni'
 os.chdir(path)
-img = nib.load('ds114_sub009_t2r1.nii')
+img1 = nib.load('MNI-8.nii')
 
 data = img.get_fdata()
-
+vols_shape = data.shape[:-1]
 n_voxels = np.prod(img.shape[:-1])
 n_trs = img.shape[-1]
 arr = (data.reshape((n_voxels, n_trs))).T
@@ -171,3 +171,36 @@ U, S, VT = np.linalg.svd(unscaled_covariance)
 X1 = center_mean(arr)
 coVarM = cov(X1)
 U1, S1, V1 = np.linalg.svd(coVarM)
+
+#Trial for thr actual ICA analysis
+path = 'C:/Users/PATTIAP/Downloads/trial'
+n_pca = 50
+N = 122880
+
+tcat_mat = temporal_concat(path, n_pca, N)
+
+tcat_cen = center_mean(tcat_mat)
+ICA_mat = whiten(tcat_cen)
+
+ICA_mat_cov = np.round(cov(ICA_pre_mat))
+ICA_pre_mat = ICA_mat[0]
+
+#Doing the actual ICA------
+from sklearn.decomposition import FastICA
+ICA = FastICA(n_components=10,whiten=False,max_iter=1000)
+ica = ICA.fit_transform(ICA_premat.T).T
+#Converting to z-score maps
+ica -= ica.mean(axis=0)
+ica /= ica.std(axis=0)
+#Thresholding - include a condition statement - choose lower or upper limit
+ica[np.abs(ica) < .8] = 0
+masker = NiftiMasker(smoothing_fwhm=8, memory='nilearn_cache', memory_level=1,
+                     mask_strategy='epi', standardize=True)
+ni_img1 = masker.inverse_transform(ica)
+ica_4D = ica.T.reshape(data.shape[:-1]+(10,))
+
+del ica
+from nilearn.input_data import NiftiMasker
+masker = NiftiMasker(memory='nilearn_cache', memory_level=1,
+                     mask_strategy='epi', standardize=False)
+img1_masked = masker.fit_transform(img1)

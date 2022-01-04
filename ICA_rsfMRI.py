@@ -18,7 +18,6 @@ def nii_concat(input_path, save_path):
                 if files.endswith(".nii"):
                     niilist.append(files)
             imgcat = nib.concat_images(niilist)
-            nib.save(imgcat,os.path.join(save_path,'MNI-'+subdir+'.nii'))
             del imgcat
 # CENTERING BASED ON MEANS
 def center_mean(x):
@@ -39,6 +38,7 @@ def whiten(x):
     d = np.diag(1.0 / np.sqrt(S))
     whiteM = np.dot(U, np.dot(d, U.T))
     Xw = np.dot(whiteM, x)
+    print('Whitening operation - DONE')
     return Xw, whiteM
 # DO PCA ANALYSIS
 def _do_PCA (x,n_components):
@@ -82,10 +82,207 @@ def temporal_concat(location,n_comp,n_vxl):
     print('Temporal concatenation -- DONE')
     tempcat_dat = np.delete(tempcat_dat,0,0)
     return tempcat_dat
-
+# DO GROUP ICA
+def _do_ICA(threshold,x,n_comp,z_score = None,thresh_method='min'):
+    from sklearn.decomposition import FastICA
+    ICA = FastICA(n_components=n_comp,whiten=False, algorithm="parallel",max_iter=1000)
+    ica = ICA.fit_transform(x.T).T
+    if z_score == True:
+        ica -= ica.mean(axis=0)
+        ica /= ica.std(axis=0)
+    else:
+        pass
+    if thresh_method == 'min':
+        ica[np.abs(ica)<threshold]=0
+    elif thresh_method == 'max':
+        ica[np.abs(ica)>threshold]=0
+    else:
+        pass
+    return ica
 
 path = 'C:/Users/PATTIAP/Downloads/trial'
-n_pca = 50
-N = 122880
+components = 50
+voxels = 122880
 
-tcat_mat = temporal_concat(path, n_pca, N)
+pca_tcat = temporal_concat(path, components,voxels)
+pca_mat = center_mean(pca_tcat)
+pca_whiten = whiten(pca_mat)
+ICA_premat = pca_whiten[0]
+
+ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
