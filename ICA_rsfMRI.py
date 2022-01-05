@@ -160,7 +160,9 @@ ICA_mat /= ICA_mat.std(axis=0)
 ICA_mat[np.abs(ICA_mat) > 2] = 0
 # RESHAPING THESE BACK TO 4D NIFTI FILES
 ICA_MAT_4D = ICA_mat.T.reshape(vol+(ICA_mat.shape[0],))
-
+for i in range(ICA_mat.shape[0]):
+    ICA_img = ICA_MAT_4D[:,:,:,i]
+ICA_MAT_4D[:,:,:,i]
 # TRYING OUT DUAL REGRESSION
 # STEP 1 - SPATIAL REGRESSION
 # Using the template spatial maps as the
