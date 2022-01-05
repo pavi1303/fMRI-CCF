@@ -154,7 +154,7 @@ path = 'C:/Users/PATTIAP/Desktop/Dataset/fMRI_MNI_sample'
 ICA_mat = tempcat(path)
 
 #Trial for january 3 - check if means and the covariance are calculated along the right axis
-path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI/Trial'
+path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 os.chdir(path)
 img = nib.load('MNI-008.nii')
 

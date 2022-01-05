@@ -19,7 +19,25 @@ def nii_concat(input_path, save_path):
                 if files.endswith(".nii"):
                     niilist.append(files)
             imgcat = nib.concat_images(niilist)
+            nib.save(imgcat, os.path.join(save_path, 'MNI-' + subdir + '.nii'))
             del imgcat
+#
+# OBTAINING THE NII IMAGE DIMENSIONS FOR LATER USE
+def _getnii_details(location,filename):
+    import os
+    import nibabel as nib
+    import numpy as np
+    if os.path.exists(location):
+        os.chdir(location)
+    else:
+        print("Current working directory doesn't exist")
+    img = nib.load(filename)
+    data = img.get_fdata()
+    n_voxels = np.prod(data.shape[:-1])
+    n_trs = data.shape[-1]
+    vols_shape = data.shape[:-1]
+    nii_dim = data.shape
+    return nii_dim,vols_shape,n_voxels,n_trs
 # CENTERING BASED ON MEANS
 def center_mean(x):
     mean = np.mean(x, axis=1, keepdims=True)
@@ -100,7 +118,7 @@ def _do_ICA(threshold,x,n_comp,z_score = None,thresh_method='min'):
     else:
         pass
     return ica
-#Plotting function to decide on the number of principal components
+# Plotting function to decide on the number of principal components
 def _decide_PCA_comp (x):
     import numpy as np
     import matplotlib.pyplot as plt
@@ -116,23 +134,36 @@ def _decide_PCA_comp (x):
     plt.xticks(x_ax)
     plt.xlim([70,80])
 
+dim,vol,vox,trs = _getnii_details(loc,file)
 path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 components = 20
-voxels = 902629
-pca_tcat = temporal_concat(path, components,voxels)
+pca_tcat = temporal_concat(path, components,vox)
 savemat("pca_red.mat",{'pca_tcat':pca_tcat})
 
-from scipy.io import loadmat
-ica_mat = loadmat('ica_red.mat')
+
 ica_red_mat = ica_mat[3]
 _decide_PCA_comp(pca_tcat)
 ICA = FastICA(whiten=False)
 ica = ICA.fit_transform(pca_tcat.T).T
 ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
 
+# IMPORTING THE MAT FILE THAT HAS THE SPATIAL MAPS
+from scipy.io import loadmat
+ica_mat = loadmat('ica_red.mat')
+ICA_mat = ica_mat['X_reduced1']
+# CONVERTING THESE SPATIAL MAPS TO Z-SCORE MAPS
+# QN - When converting these into z-score maps, is it across different voxels within a component (or)
+# across components per voxel
+ICA_mat -= ICA_mat.mean(axis=0)
+ICA_mat /= ICA_mat.std(axis=0)
+# THRESHOLDING THESE ICA MAPS
+ICA_mat[np.abs(ICA_mat) > 2] = 0
+# RESHAPING THESE BACK TO 4D NIFTI FILES
+ICA_MAT_4D = ICA_mat.T.reshape(vol+(ICA_mat.shape[0],))
 
-
-
+# TRYING OUT DUAL REGRESSION
+# STEP 1 - SPATIAL REGRESSION
+# Using the template spatial maps as the
 
 
 
