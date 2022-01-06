@@ -299,7 +299,7 @@ def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
         ss_img = nib.load(sublist[i])
         ss_vt = _obtain_vt_data(ss_img)
         # Dual regression I - Spatial regression
-        ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
+        ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt.T)
         # Dual regression II - Temporal regression
         ss_sm = np.dot(sub_vt, np.linalg.pinv(ss_tc))
         # Conversion of these maps to z-score maps
@@ -336,9 +336,111 @@ def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
             os.makedirs(dest_loc)
     nib.save(gica_comp_img,os.path.join(dest_loc, 'gICA_component_' + str(i+1) + '.nii'))
     del gica_comp,gica_comp_img
+def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
+    group_sm -= group_sm.mean(axis=0)
+    group_sm /= group_sm.std(axis=0)
+    group_sm1 = sp.stats.zscore(group_sm,axis=0)
+    sublist = _get_list_of_nii(sub_loc)
+    number = len(sublist)
+    for i in range(number):
+        ss_img = nib.load(sublist[i])
+        ss_vt = _obtain_vt_data(ss_img)
+        # Dual regression I - Spatial regression
+        ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
+        # Dual regression II - Temporal regression
+        ss_sm = np.dot(ss_vt, np.linalg.pinv(ss_tc)).T
+        # Conversion of these maps to z-score maps
+        ss_sm = sp.stats.zscore(ss_sm,axis=1)
+        np.seterr(invalid='ignore')
+        subdir = str(sublist[i])
+        subdir1 = subdir[4:7]
+        ss_saveloc = os.path.join(save_loc,subdir1)
+        if not os.path.exists(ss_saveloc):
+            os.makedirs(ss_saveloc)
+        ss_sm_4D = ss_sm.T.reshape(vol_shape + (ss_sm.shape[0],))
+        for j in range(ss_sm.shape[0]):
+            ss_ica_comp = ss_sm_4D[..., j]
+            ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
+            nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(j + 1) + '.nii'))
+        del ss_ica_comp, ss_ica_comp_img
+    del ss_img,ss_vt,ss_tc,ss_sm,subdir, subdir1, ss_saveloc
 # TRYING MY CONCEPT OF CREATING DIRECTORIES
 dest = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA'
 subdest = 'Group_spatial_maps'
 final_dest = os.path.join(dest,subdest)
 if not os.path.exists(final_dest):
     os.makedirs(final_dest)
+
+s = 'MNI-113.nii'
+
+s1 = str(s[4:7])
+
+group_sm = ICA_mat
+img_affine = affi
+sub_loc = l
+dest_loc = save_l
+i=0
+
+ica_red_mat = ica_mat[3]
+_decide_PCA_comp(pca_tcat)
+ICA = FastICA(whiten=False)
+ica = ICA.fit_transform(pca_tcat.T).T
+ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
+
+# IMPORTING THE MAT FILE THAT HAS THE SPATIAL MAPS
+from scipy.io import loadmat
+os.chdir('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA')
+ica_mat = loadmat('ica_red_mat.mat')
+ICA_mat = ica_mat['ica_red_mat']
+# CONVERTING THESE SPATIAL MAPS TO Z-SCORE MAPS
+# QN - When converting these into z-score maps, is it across different voxels within a component (or)
+# across components per voxel
+ICA_mat -= ICA_mat.mean(axis=0)
+ICA_mat /= ICA_mat.std(axis=0)
+# THRESHOLDING THESE ICA MAPS
+ICA_mat[np.abs(ICA_mat) > 2] = 0
+# RESHAPING THESE BACK TO 4D NIFTI FILES
+i=0
+ICA_MAT_4D = ICA_mat.T.reshape(vol+(ICA_mat.shape[0],))
+for i in range(ICA_mat.shape[0]):
+    ICA_img = ICA_MAT_4D[...,i]
+    ICA_comp_img = nib.Nifti1Image(ICA_MAT_4D,affi)
+    nib.
+
+ni_img = nib.Nifti1Image(ICA_MAT_4D,affi)
+nib.save(ni_img,os.path.join(path,'ICA_comp.nii'))
+del ICA_img
+# TRYING OUT DUAL REGRESSION
+# STEP 1 - SPATIAL REGRESSION
+# Using the template spatial maps as the
+
+ICA_mat -= ICA_mat.mean(axis=0)
+ICA_mat /= ICA_mat.std(axis=0)
+
+
+y = np.linalg.pinv(ICA_mat.T)
+ts = np.dot(y,voxtime_dat)
+ts = y*(voxtime_dat)
+
+# Trying out my ica function
+
+fileloc = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+name = 'ica_red_mat'
+aff = img.affine
+desloc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
+
+_save_ica_nifti(fileloc,name,aff,vol,desloc)
+# Trying out my dual regression function
+
+l = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+vol_shape = vol
+save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
+
+_dual_regression(ICA_mat,affi,vol,l,save_l)
+
+mat_loc = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+mat_filename = 'ica_red_mat'
+img_affine = img.affine
+dest_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
+vol_shape = vol
+i=0

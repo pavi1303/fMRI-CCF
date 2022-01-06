@@ -5,6 +5,8 @@ import nibabel as nib
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
 import scipy as sp
+from scipy.io import savemat
+from scipy.io import loadmat
 
 # CENTERING BASED ON MEANS
 def center_mean(x):
@@ -110,8 +112,7 @@ def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
     ica_mat = loadmat(str(mat_filename) + '.mat')
     group_sm = ica_mat[mat_filename]
     # CONVERTING TO Z-SCORE MAPS
-    group_sm -= group_sm.mean(axis=0)
-    group_sm /= group_sm.std(axis=0)
+    group_sm = sp.stats.zscore(group_sm,axis=1)
     # THRESHOLDING IF NECESSARY
     #group_sm[np.abs(group_sm) > thresh] = 0
     # RESHAPING THE ICA MATRIX TO 4D
@@ -127,6 +128,7 @@ def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
 def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
     group_sm -= group_sm.mean(axis=0)
     group_sm /= group_sm.std(axis=0)
+    group_sm1 = sp.stats.zscore(group_sm,axis=0)
     sublist = _get_list_of_nii(sub_loc)
     number = len(sublist)
     for i in range(number):
@@ -135,109 +137,50 @@ def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
         # Dual regression I - Spatial regression
         ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
         # Dual regression II - Temporal regression
-        ss_sm = np.dot(sub_vt, np.linalg.pinv(ss_tc))
+        ss_sm = np.dot(ss_vt, np.linalg.pinv(ss_tc)).T
         # Conversion of these maps to z-score maps
-        ss_sm -= ss_sm.mean(axis=0)
-        ss_sm /= ss_sm.std(axis=0)
+        ss_sm = sp.stats.zscore(ss_sm,axis=1)
+        np.seterr(invalid='ignore')
         subdir = str(sublist[i])
-        ss_saveloc = os.path.join(save_loc,subdir)
+        subdir1 = subdir[4:7]
+        ss_saveloc = os.path.join(save_loc,subdir1)
         if not os.path.exists(ss_saveloc):
             os.makedirs(ss_saveloc)
-        ss_sm_4D = sub_sm.T.reshape(vol_shape + (sub_sm.shape[0],))
-        for j in range(sub_sm.shape[0]):
+        ss_sm_4D = ss_sm.T.reshape(vol_shape + (ss_sm.shape[0],))
+        for j in range(ss_sm.shape[0]):
             ss_ica_comp = ss_sm_4D[..., j]
             ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
-            nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(i + 1) + '.nii'))
-            del ss_ica_comp, ss_ica_comp_img
+            nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(j + 1) + '.nii'))
+        del ss_ica_comp, ss_ica_comp_img
+    del ss_img,ss_vt,ss_tc,ss_sm,subdir, subdir1, ss_saveloc
 
 # END OF ALL THE FUNCTIONS FOR NOW
 # FUNCTIONS TO CREATE
 # 1. Reducing the list of ICA components after visualizing
 # 2. Averaging the component maps across all the subjects
-# Need to create a tiny function that can reduce
-# the required list of components from the entire list of ica components.
+# Testing of my pipeline - dry run 1
 
-dim,vol,vox,trs,affi = _getnii_details(loc,file)
+# Getting the details of a template NIFTI image
 path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
-components = 20
+file = 'MNI-008.nii'
+dim, vol, vox, trs, aff = _getnii_details(path, file)
+# Performing subject-wise PCA and temporal concatenation
+components = 100
 pca_tcat = temporal_concat(path, components,vox)
-savemat("pca_red.mat",{'pca_tcat':pca_tcat})
-
-
-ica_red_mat = ica_mat[3]
-_decide_PCA_comp(pca_tcat)
-ICA = FastICA(whiten=False)
-ica = ICA.fit_transform(pca_tcat.T).T
-ICA_mat = _do_ICA(2,ICA_premat,10,z_score=True,thresh_method='max')
-
-# IMPORTING THE MAT FILE THAT HAS THE SPATIAL MAPS
-from scipy.io import loadmat
-ica_mat = loadmat('ica_red.mat')
-ICA_mat = ica_mat['X_reduced1']
-# CONVERTING THESE SPATIAL MAPS TO Z-SCORE MAPS
-# QN - When converting these into z-score maps, is it across different voxels within a component (or)
-# across components per voxel
-ICA_mat -= ICA_mat.mean(axis=0)
-ICA_mat /= ICA_mat.std(axis=0)
-# THRESHOLDING THESE ICA MAPS
-ICA_mat[np.abs(ICA_mat) > 2] = 0
-# RESHAPING THESE BACK TO 4D NIFTI FILES
-i=0
-ICA_MAT_4D = ICA_mat.T.reshape(vol+(ICA_mat.shape[0],))
-for i in range(ICA_mat.shape[0]):
-    ICA_img = ICA_MAT_4D[...,i]
-    ICA_comp_img = nib.Nifti1Image(ICA_MAT_4D,affi)
-    nib.
-
-
-ni_img = nib.Nifti1Image(ICA_MAT_4D,affi)
-nib.save(ni_img,os.path.join(path,'ICA_comp.nii'))
-del ICA_img
-# TRYING OUT DUAL REGRESSION
-# STEP 1 - SPATIAL REGRESSION
-# Using the template spatial maps as the
-def _dual_regression(location,gICA_sm):
-    gICA_sm -= gICA_sm.mean(axis=0)
-    gICA_sm /= gICA_sm.std(axis=0)
-    sublist = _get_list_of_nii(location)
-    number = len(sublist)
-    for i in range(number):
-        sub_img = nib.load(sublist[i])
-        sub_vt = _obtain_vt_data(sub_img)
-        sm = np.linalg.pinv(gICA_sm.T)
-
-
-ICA_mat -= ICA_mat.mean(axis=0)
-ICA_mat /= ICA_mat.std(axis=0)
-
-
-y = np.linalg.pinv(ICA_mat.T)
-ts = np.dot(y,voxtime_dat)
-ts = y*(voxtime_dat)
-
-# Trying out my ica function
-
-fileloc = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+# Performing final stage of PCA on the concatenated matrix
+pca_red_tcat = _do_PCA_v2(pca_tcat,100)
+os.chdir('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA')
+# Saving the result as a mat file for ICA analysis in MATLAB
+savemat("pca_red.mat",{'pca_red_tcat':pca_red_tcat})
+# Importing the ICA result from MATLAB and saving as NIFTI images
 name = 'ica_red_mat'
-aff = img.affine
 desloc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
-
-_save_ica_nifti(fileloc,name,aff,vol,desloc)
-# Trying out my dual regression function
-
-l = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
-aff = img.affine
-vol_shape = vol
+_save_ica_nifti(path, name, aff, vol, desloc)
+# Reducing the ICA dimensions space
+# Need to create a function
+# Performing dual regression
 save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
-
-_dual_regression(ICA_mat,aff,vol,l,save_l)
-
-mat_loc = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
-mat_filename = 'ica_red_mat'
-img_affine = img.affine
-dest_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
-vol_shape = vol
-i=0
+_dual_regression(ICA_mat, aff, vol, path, save_l)
 
 
 
