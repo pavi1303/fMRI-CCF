@@ -30,16 +30,16 @@ def whiten(x):
     print('Whitening operation - DONE')
     return Xw, whiteM
 # GET THE LIST OF NII FILES IN THE LOCATION
-def _get_list_of_nii(location):
+def _get_list_of_ext(location,ext):
     if os.path.exists(location):
         os.chdir(location)
     else:
         print("Current working directory doesn't exist")
-    list_of_nii=[]
+    list_of_files=[]
     for files in os.listdir():
-        if files.endswith(".nii"):
-            list_of_nii.append(files)
-    return list_of_nii
+        if files.endswith(ext):
+            list_of_files.append(files)
+    return list_of_files
 # GET THE DETAILS OF A TEMPLATE NII IMAGE
 def _getnii_details(location,filename):
     if os.path.exists(location):
@@ -59,7 +59,7 @@ def _nii_concat(input_path, save_path):
     for dirpath,dirs, filenames in os.walk(input_path):
         for subdir in dirs:
             subpath = os.path.join(input_path, subdir)
-            niilist = _get_list_of_nii(subpath)
+            niilist = _get_list_of_ext(subpath, ".nii")
             imgcat = nib.concat_images(niilist)
             nib.save(imgcat, os.path.join(save_path, 'MNI-' + subdir + '.nii'))
             del imgcat
@@ -72,7 +72,7 @@ def _obtain_vt_data(nii_image):
     return vt_data
 # DO PCA & TEMPORAL CONCATENATION OF THE DATA
 def _temporal_concat(location,n_comp,n_vxl):
-    list_of_nii = _get_list_of_nii(location)
+    list_of_nii = _get_list_of_ext(location,".nii")
     length = len(list_of_nii)
     tempcat_dat = np.empty([1,n_vxl])
     for i in range(length):
@@ -129,7 +129,7 @@ def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
     group_sm -= group_sm.mean(axis=0)
     group_sm /= group_sm.std(axis=0)
     group_sm1 = sp.stats.zscore(group_sm,axis=0)
-    sublist = _get_list_of_nii(sub_loc)
+    sublist = _get_list_of_ext(sub_loc,".nii")
     number = len(sublist)
     for i in range(number):
         ss_img = nib.load(sublist[i])
