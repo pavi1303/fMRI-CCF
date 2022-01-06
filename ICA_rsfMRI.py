@@ -122,9 +122,18 @@ def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
         if not os.path.exists(dest_loc):
             os.makedirs(dest_loc)
         nib.save(gica_comp_img, os.path.join(dest_loc, 'gICA_component_' + str(i + 1) + '.nii'))
-
-
-    del gica_comp,gica_comp_img
+        del gica_comp, gica_comp_img
+# DUAL REGRESSION
+def _dual_regression(location,gICA_sm):
+    gICA_sm -= gICA_sm.mean(axis=0)
+    gICA_sm /= gICA_sm.std(axis=0)
+    sublist = _get_list_of_nii(location)
+    number = len(sublist)
+    for i in range(number):
+        sub_img = nib.load(sublist[i])
+        sub_vt = _obtain_vt_data(sub_img)
+        sm = np.linalg.pinv(gICA_sm.T)
+# END OF ALL THE FUNCTIONS FOR NOW
 
 
 dim,vol,vox,trs,affi = _getnii_details(loc,file)
