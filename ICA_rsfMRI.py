@@ -124,17 +124,38 @@ def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
         nib.save(gica_comp_img, os.path.join(dest_loc, 'gICA_component_' + str(i + 1) + '.nii'))
         del gica_comp, gica_comp_img
 # DUAL REGRESSION
-def _dual_regression(location,gICA_sm):
-    gICA_sm -= gICA_sm.mean(axis=0)
-    gICA_sm /= gICA_sm.std(axis=0)
-    sublist = _get_list_of_nii(location)
+def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
+    group_sm -= group_sm.mean(axis=0)
+    group_sm /= group_sm.std(axis=0)
+    sublist = _get_list_of_nii(sub_loc)
     number = len(sublist)
     for i in range(number):
-        sub_img = nib.load(sublist[i])
-        sub_vt = _obtain_vt_data(sub_img)
-        sm = np.linalg.pinv(gICA_sm.T)
-# END OF ALL THE FUNCTIONS FOR NOW
+        ss_img = nib.load(sublist[i])
+        ss_vt = _obtain_vt_data(ss_img)
+        # Dual regression I - Spatial regression
+        ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
+        # Dual regression II - Temporal regression
+        ss_sm = np.dot(sub_vt, np.linalg.pinv(ss_tc))
+        # Conversion of these maps to z-score maps
+        ss_sm -= ss_sm.mean(axis=0)
+        ss_sm /= ss_sm.std(axis=0)
+        subdir = str(sublist[i])
+        ss_saveloc = os.path.join(save_loc,subdir)
+        if not os.path.exists(ss_saveloc):
+            os.makedirs(ss_saveloc)
+        ss_sm_4D = sub_sm.T.reshape(vol_shape + (sub_sm.shape[0],))
+        for j in range(sub_sm.shape[0]):
+            ss_ica_comp = ss_sm_4D[..., j]
+            ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
+            nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(i + 1) + '.nii'))
+            del ss_ica_comp, ss_ica_comp_img
 
+# END OF ALL THE FUNCTIONS FOR NOW
+# FUNCTIONS TO CREATE
+# 1. Reducing the list of ICA components after visualizing
+# 2. Averaging the component maps across all the subjects
+# Need to create a tiny function that can reduce
+# the required list of components from the entire list of ica components.
 
 dim,vol,vox,trs,affi = _getnii_details(loc,file)
 path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
@@ -202,6 +223,14 @@ aff = img.affine
 desloc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
 
 _save_ica_nifti(fileloc,name,aff,vol,desloc)
+# Trying out my dual regression function
+
+l = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
+aff = img.affine
+vol_shape = vol
+save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
+
+_dual_regression(ICA_mat,aff,vol,l,save_l)
 
 mat_loc = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 mat_filename = 'ica_red_mat'

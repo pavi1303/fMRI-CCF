@@ -290,21 +290,32 @@ def _decide_PCA_comp (x):
     plt.xlim([70,80])
 
 # DUAL REGRESSION
-def _dual_regression(nii_loc,mat_loc,mat_filename):
-    os.chdir(mat_loc)
-    ica_mat = loadmat(mat_filename)
-    group_sm = ica_mat[mat_filename]
+def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
     group_sm -= group_sm.mean(axis=0)
     group_sm /= group_sm.std(axis=0)
-    sublist = _get_list_of_nii(nii_loc)
+    sublist = _get_list_of_nii(sub_loc)
     number = len(sublist)
     for i in range(number):
-        sub_img = nib.load(sublist[i])
-        sub_vt = _obtain_vt_data(sub_img)
+        ss_img = nib.load(sublist[i])
+        ss_vt = _obtain_vt_data(ss_img)
         # Dual regression I - Spatial regression
-        sub_tc = np.dot(np.linalg.pinv(group_sm.T), sub_vt)
+        ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
         # Dual regression II - Temporal regression
-        sub_sm = np.dot(sub_vt, np.linalg.pinv(sub_tc))
+        ss_sm = np.dot(sub_vt, np.linalg.pinv(ss_tc))
+        # Conversion of these maps to z-score maps
+        ss_sm -= ss_sm.mean(axis=0)
+        ss_sm /= ss_sm.std(axis=0)
+        subdir = str(sublist[i])
+        ss_saveloc = os.path.join(save_loc,subdir)
+        if not os.path.exists(ss_saveloc):
+            os.makedirs(ss_saveloc)
+        ss_sm_4D = sub_sm.T.reshape(vol_shape + (sub_sm.shape[0],))
+        for j in range(sub_sm.shape[0]):
+            ss_ica_comp = ss_sm_4D[..., j]
+            ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
+            nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(i + 1) + '.nii'))
+            del ss_ica_comp, ss_ica_comp_img
+
 
 # TRYING OUT SAVING EACH OF THE COMPONENTS OF ICA AS NIFTI
 def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
