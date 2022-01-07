@@ -516,3 +516,18 @@ def _temporal_concat(location,n_vxl):
     return tempcat_dat
 
 tcat = _temporal_concat(s_l,vox)
+
+
+
+
+
+
+input_loc = 'E:/LRCBH/COBRE-MNI/Trial'
+save_loc = 'E:/LRCBH/Results/1.PCA'
+comp = 5
+
+_concat_subject_PCA(comp, input_loc, save_loc)
+
+
+
+
