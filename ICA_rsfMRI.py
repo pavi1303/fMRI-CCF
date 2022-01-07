@@ -56,13 +56,16 @@ def _getnii_details(location,filename):
     return nii_dim,vols_shape,n_voxels,n_trs,aff
 # CONCATENATION OF TRS TO GET 4D NIFTI FILE
 def _nii_concat(input_path, save_path):
-    for dirpath,dirs, filenames in os.walk(input_path):
+    for dirpath, dirs, filenames in os.walk(input_path):
         for subdir in dirs:
             subpath = os.path.join(input_path, subdir)
             niilist = _get_list_of_ext(subpath, ".nii")
+            print('Performing nii concatenation for subject ' + str(subdir) + '...')
             imgcat = nib.concat_images(niilist)
-            nib.save(imgcat, os.path.join(save_path, 'MNI-' + subdir + '.nii'))
+            nib.save(imgcat, os.path.join(save_path, 'MNI-' + str(subdir) + '.nii'))
             del imgcat
+            print('nii concatenation done for subject ' + str(subdir) + '.')
+    print('NII concatenation -- DONE')
 # GENERATE 2D VOXEL-TIME SERIES DATA FROM 4D NIFTI IMAGE
 def _obtain_vt_data(nii_image):
     n_voxels = np.prod(nii_image.shape[:-1])
@@ -72,17 +75,17 @@ def _obtain_vt_data(nii_image):
     return vt_data
 # DO SUBJECT WISE PCA AND SAVE THEM
 def _subject_PCA(location,n_comp,save_location):
-    list_of_nii = _get_list_of_ext(location,".nii")
+    list_of_nii = _get_list_of_ext(location, ".nii")
     length = len(list_of_nii)
     for i in range(length):
         subloc = list_of_nii[i]
         pat_img = nib.load(subloc)
         voxtime_dat = _obtain_vt_data(pat_img).T
         print("Performing PCA using " + str(n_comp) + " components for subject " + str(subloc[4:7]) + "...")
-        PCA_red = _do_PCA_v2(voxtime_dat,n_comp)
+        PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
         if not os.path.exists(save_location):
             os.makedirs(save_location)
-        np.save(os.path.join(save_location,'PCA_' + str(subloc[4:7] + '.npy')),PCA_red)
+        np.save(os.path.join(save_location, 'PCA_' + str(subloc[4:7] + '.npy')), PCA_red)
         print("PCA reduction done for subject " + str(subloc[4:7]) + ".")
         del pat_img, voxtime_dat, PCA_red
     print('PCA reduction -- DONE')
@@ -156,7 +159,7 @@ def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
         # Dual regression II - Temporal regression
         ss_sm = np.dot(ss_vt, np.linalg.pinv(ss_tc)).T
         # Conversion of these maps to z-score maps
-        ss_sm = sp.stats.zscore(ss_sm,axis=1)
+        ss_sm = sp.stats.zscore(ss_sm, axis=1)
         subdir = str(sublist[i])
         subdir1 = subdir[4:7]
         ss_saveloc = os.path.join(save_loc,subdir1)
@@ -168,14 +171,19 @@ def _dual_regression(group_sm,img_affine,vol_shape,sub_loc,save_loc):
             ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
             nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(j + 1) + '.nii'))
         del ss_ica_comp, ss_ica_comp_img
-    del ss_img,ss_vt,ss_tc,ss_sm,subdir, subdir1, ss_saveloc
+    del ss_img, ss_vt, ss_tc, ss_sm, subdir, subdir1, ss_saveloc
 
 # END OF ALL THE FUNCTIONS FOR NOW
 # FUNCTIONS TO CREATE
 # 1. Minor tweak to the DR to save the individual TC's as well
 # 2. Averaging the component maps across all the subjects
 # Testing of my pipeline - dry run 1
+#----------------------------------------------------------------------#
 
+# Performing nii concatenation of all the subjects
+input_loc = 'E:/LRCBH/COBRE-MNI/Trial'
+save_loc = 'E:/LRCBH/Concatenated/Grp1-controls'
+_nii_concat(input_loc, save_loc)
 # Getting the details of a template NIFTI image
 path = 'C:/Users/PATTIAP/Desktop/Dataset/COBRE_fMRI_MNI'
 file = 'MNI-008.nii'
