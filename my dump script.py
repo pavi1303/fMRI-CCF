@@ -444,3 +444,75 @@ img_affine = img.affine
 dest_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
 vol_shape = vol
 i=0
+
+list = [1,2,3,4,5,6]
+
+ICA_mat_red = ICA_mat[list,:]
+
+# Breakup the temporal concat function into two parts
+# Generate a mini function for ICA space reduction
+# Minor tweak to the dual regression function to save the tc's as well
+def _shortlist_ICA(x,list_of_comp):
+    x_red = x[list_of_comp,:]
+    return x_red
+ICA_x = _shortlist_ICA(ICA_mat,list)
+def _get_list_of_ext(location, ext):
+        if os.path.exists(location):
+            os.chdir(location)
+        else:
+            print("Current working directory doesn't exist")
+        list_of_files = []
+        for files in os.listdir():
+            if files.endswith(ext):
+                list_of_files.append(files)
+        return list_of_files
+q = _get_list_of_ext(path,".mat")
+# Breaking the temporal concat into two functions
+def _temporal_concat(location,n_comp,n_vxl):
+    list_of_nii = _get_list_of_ext(location,".nii")
+    length = len(list_of_nii)
+    tempcat_dat = np.empty([1,n_vxl])
+    for i in range(length):
+        pat_img = nib.load(list_of_nii[i])
+        voxtime_dat = _obtain_vt_data(pat_img).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str((i+1)) + "...")
+        PCA_red = _do_PCA_v2(voxtime_dat,n_comp)
+        print("Performing temporal concatenation of subject " + str((i+1)) + "...")
+        tempcat_dat = np.append(tempcat_dat, PCA_red, axis=0)
+        del pat_img,n_voxels,n_trs,data, voxtime_dat
+    print('Temporal concatenation -- DONE')
+    tempcat_dat = np.delete(tempcat_dat,0,0)
+    return tempcat_dat
+def _subject_PCA(location,n_comp,save_location):
+    list_of_nii = _get_list_of_ext(location,".nii")
+    length = len(list_of_nii)
+    for i in range(length):
+        subloc = list_of_nii[i]
+        pat_img = nib.load(subloc)
+        voxtime_dat = _obtain_vt_data(pat_img).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str(subloc[4:7]) + "...")
+        PCA_red = _do_PCA_v2(voxtime_dat,n_comp)
+        if not os.path.exists(save_location):
+            os.makedirs(save_location)
+        np.save(os.path.join(save_location,'PCA_' + str(subloc[4:7] + '.npy')),PCA_red)
+        print("PCA reduction done for subject " + str(subloc[4:7]) + ".")
+        del pat_img, voxtime_dat, PCA_red
+    print('PCA reduction -- DONE')
+
+comp = 10
+s_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA'
+_subject_PCA(path, comp, s_l)
+def _temporal_concat(location,n_vxl):
+    list_of_npy = _get_list_of_ext(location,".npy")
+    length = len(list_of_npy)
+    tempcat_dat = np.empty([1,n_vxl])
+    for i in range(length):
+        subloc = list_of_npy[i]
+        pat_pca = np.load(subloc)
+        print("Performing temporal concatenation for subject " + str(subloc[4:7]) + "...")
+        tempcat_dat = np.append(tempcat_dat, pat_pca, axis=0)
+    print('Temporal concatenation -- DONE')
+    tempcat_dat = np.delete(tempcat_dat,0,0)
+    return tempcat_dat
+
+tcat = _temporal_concat(s_l,vox)
