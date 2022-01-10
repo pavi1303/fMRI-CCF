@@ -235,6 +235,44 @@ _save_ica_nifti(path, name, aff, vol, desloc)
 # Performing dual regression
 save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
 _dual_regression(ICA_mat, aff, vol, path, save_l)
+# Work during the weekend
+input_loc = 'D:/LRCBH/COBRE-MNI/Individual_data'
+save_loc = 'D:/LRCBH/Results/1.PCA/v2'
+comp = 10
+_concat_subject_PCA(comp,input_loc,save_loc)
+# Performing nii concat to get a template image
+_nii_concat('D:/LRCBH/COBRE-MNI/Trial', 'D:/LRCBH/COBRE-MNI')
+# Getting the details of a template NIFTI image
+path = 'D:/LRCBH/COBRE-MNI'
+file = 'MNI-008.nii'
+dim, vol, vox, trs, aff = _getnii_details(path, file)
+# Performing temporal concatenation on the obtained subject PCA's
+locc = 'D:/LRCBH/Results/1.PCA/v2'
+pca_tcat = _temporal_concat(locc, vox,10)
+pca_red_tcat = pca_red_tcat.astype('float64')
+np.isnan(pca_tcat).any()
+np.all(pca_tcat)
+a=np.isinf(pca_tcat)
+save_path = 'D:/LRCBH/Results/1.PCA/v2'
+np.save(os.path.join(save_path, 'pca_tcat.npy'), pca_tcat)
+savemat('pca_red_tcat.mat',{'pca_red_tcat': pca_red_tcat})
+o.chdir(save_path)
+pca_tact = np.load('pca_tcat.npy')
+# Performing final stage of PCA on the concatenated matrix
+pca_tcat1 =  pca_tcat([0:500],:)
+pca_red_tcat = _do_PCA_v2(pca_tcat, 100)
+os.chdir('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA')
+# Saving the result as a mat file for ICA analysis in MATLAB
+savemat("pca_red.mat", {'pca_tcat': pca_tcat})
+# Importing the ICA result from MATLAB and saving as NIFTI images
+name = 'ica_red_mat'
+desloc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
+_save_ica_nifti(path, name, aff, vol, desloc)
+# Reducing the ICA dimensions space
+# Need to create a function
+# Performing dual regression
+save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
+_dual_regression(ICA_mat, aff, vol, path, save_l)
 
 
 
