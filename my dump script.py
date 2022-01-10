@@ -516,18 +516,65 @@ def _temporal_concat(location,n_vxl):
     return tempcat_dat
 
 tcat = _temporal_concat(s_l,vox)
-
-
-
-
-
-
 input_loc = 'E:/LRCBH/COBRE-MNI/Trial'
 save_loc = 'E:/LRCBH/Results/1.PCA'
 comp = 5
 
 _concat_subject_PCA(comp, input_loc, save_loc)
 
+# My new function for dual regression
+os.chdir('D:/LRCBH/Results/2.ICA')
+mat = loadmat('ica_red_mat.mat')
+mat_file = mat['ica_red_mat']
+tc_path='D:/LRCBH/Results/3.DR/Variables/Subject_timecourses'
+sm_path='D:/LRCBH/Results/3.DR/Variables/Subject_spatialmaps'
+sub_path='D:/LRCBH/COBRE-MNI/Trial'
+def _dual_regression(group_sm, img_affine, vol_shape, tc_loc, sm_loc, input_path):
+    group_sm = sp.stats.zscore(group_sm,axis=1)
+    for dirpath, dirs, filenames in os.walk(input_path):
+        for subdir in dirs:
+            subpath = os.path.join(input_path, subdir)
+            niilist = _get_list_of_ext(subpath, ".nii")
+            print('Performing nii concatenation for subject ' + str(subdir) + '...')
+            pat_img = nib.concat_images(niilist)
+            print('Generating voxel time series data for subject ' + str(subdir) + '.')
+            ss_vt = _obtain_vt_data(pat_img)
+            # Dual regression I - Spatial regression
+            print('Doing spatial regression for subject ' + str(subdir) + '...')
+            ss_tc = np.dot (np.linalg.pinv (group_sm.T), ss_vt)
+            if not os.path.exists(tc_loc):
+                os.makedirs(tc_loc)
+            np.save(os.path.join(tc_loc,'ss_tc_' + str(subdir) + '.npy'), ss_tc)
+            print('Spatial regression -- DONE for subject ' + str(subdir) + '.')
+            # Dual regression II - Temporal regression
+            print ('Doing temporal regression for subject ' + str (subdir) + '...')
+            ss_sm = np.dot (ss_vt, np.linalg.pinv (ss_tc)).T
+            # Conversion of these maps to z-score maps
+            ss_sm = sp.stats.zscore (ss_sm, axis=1)
+            ss_saveloc = os.path.join (sm_loc, subdir)
+            if not os.path.exists(ss_saveloc):
+                os.makedirs(ss_saveloc)
+            ss_sm_4D = ss_sm.T.reshape (vol_shape + (ss_sm.shape[0],))
+            for j in range (ss_sm.shape[0]):
+                ss_ica_comp = ss_sm_4D[..., j]
+                ss_ica_comp_img = nib.Nifti1Image (ss_ica_comp, img_affine)
+                nib.save (ss_ica_comp_img, os.path.join (ss_saveloc, 'ssICA_component_' + str (j + 1) + '.nii'))
+                del ss_ica_comp, ss_ica_comp_img
+            del ss_vt,ss_tc,ss_sm,pat_img,ss_saveloc
 
+_dual_regression(mat_file,aff,vol,tc_path,sm_path,sub_path)
+
+
+
+
+save_path = 'D:/LRCBH/Results/1.PCA/v2'
+np.save(os.path.join(save_path, 'pca_red_tcat.npy'), pca_red_tcat)
+arr = np.random.rand(10,850)
+c = np.corrcoef(arr)
+import seaborn as sns
+sns.heatmap(c,annot=True,vmin=-1,vmax=1,annot_kws={"size": 7})
+
+def _gen_fullcorr(sub_tc, corr_png, corr_npy):
+    mat_map = sns.heatmap(c,annot=True,vmin=-1,vmax=1,annot_kws={"size": 7})
 
 
