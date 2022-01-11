@@ -529,11 +529,14 @@ mat_file = mat['ica_red_mat']
 tc_path='D:/LRCBH/Results/3.DR/Variables/Subject_timecourses'
 sm_path='D:/LRCBH/Results/3.DR/Variables/Subject_spatialmaps'
 sub_path='D:/LRCBH/COBRE-MNI/Trial'
-def _dual_regression(group_sm, img_affine, vol_shape, tc_loc, sm_loc, input_path):
+def _dual_regression(img_affine, vol_shape, tc_loc, sm_loc, sub_path, mat_loc, mat_filename):
+    os.chdir(mat_loc)
+    ica_mat = loadmat(str(mat_filename) + '.mat')
+    group_sm = ica_mat[mat_filename]
     group_sm = sp.stats.zscore(group_sm,axis=1)
-    for dirpath, dirs, filenames in os.walk(input_path):
+    for dirpath, dirs, filenames in os.walk(sub_path):
         for subdir in dirs:
-            subpath = os.path.join(input_path, subdir)
+            subpath = os.path.join(sub_path, subdir)
             niilist = _get_list_of_ext(subpath, ".nii")
             print('Performing nii concatenation for subject ' + str(subdir) + '...')
             pat_img = nib.concat_images(niilist)
@@ -547,7 +550,7 @@ def _dual_regression(group_sm, img_affine, vol_shape, tc_loc, sm_loc, input_path
             np.save(os.path.join(tc_loc,'ss_tc_' + str(subdir) + '.npy'), ss_tc)
             print('Spatial regression -- DONE for subject ' + str(subdir) + '.')
             # Dual regression II - Temporal regression
-            print ('Doing temporal regression for subject ' + str (subdir) + '...')
+            print('Doing temporal regression for subject ' + str (subdir) + '...')
             ss_sm = np.dot (ss_vt, np.linalg.pinv (ss_tc)).T
             # Conversion of these maps to z-score maps
             ss_sm = sp.stats.zscore (ss_sm, axis=1)
@@ -560,21 +563,112 @@ def _dual_regression(group_sm, img_affine, vol_shape, tc_loc, sm_loc, input_path
                 ss_ica_comp_img = nib.Nifti1Image (ss_ica_comp, img_affine)
                 nib.save (ss_ica_comp_img, os.path.join (ss_saveloc, 'ssICA_component_' + str (j + 1) + '.nii'))
                 del ss_ica_comp, ss_ica_comp_img
+            print('Temporal regression -- DONE for subject ' + str(subdir) + '.')
             del ss_vt,ss_tc,ss_sm,pat_img,ss_saveloc
+
 
 _dual_regression(mat_file,aff,vol,tc_path,sm_path,sub_path)
 
+def _fullcorr(input_path, save_path):
+    list_of_npy = _get_list_of_ext(input_path, ".npy")
+    list_of_npy.sort()
+    length = len(list_of_npy)
+    for i in range(length):
+        sub_tc = list_of_npy[i]
+        pat_tc = np.load(sub_tc)
+        corr = np.corrcoef(pat_tc)
+        cm = sns.heatmap(corr, annot=True, vmin=-1, vmax=1, annot_kws={"size": 7}, cmap="YlGnBu")
+        fig = cm.get_figure()
+        os.chdir(save_path)
+        fig.savefig(('FC_matrix_' + str(sub_tc[6:9]) + '.png'),dpi=300)
+        del sub_tc, pat_tc, corr, cm, fig
 
-
+x = str('ss_tc_008')
+_fullcorr(ss_tc, ss_tc)
 
 save_path = 'D:/LRCBH/Results/1.PCA/v2'
 np.save(os.path.join(save_path, 'pca_red_tcat.npy'), pca_red_tcat)
 arr = np.random.rand(10,850)
 c = np.corrcoef(arr)
 import seaborn as sns
-sns.heatmap(c,annot=True,vmin=-1,vmax=1,annot_kws={"size": 7})
+plt.use("TkAgg")
+del hm,fig
+hm2 = sns.heatmap(c,annot=True,vmin=-1,vmax=1,annot_kws={"size": 7},cmap="YlGnBu")
+fig2 = hm.get_figure()
+fig2.savefig('Corrmat1.png',dpi=300)
+plt.show()
 
 def _gen_fullcorr(sub_tc, corr_png, corr_npy):
     mat_map = sns.heatmap(c,annot=True,vmin=-1,vmax=1,annot_kws={"size": 7})
 
+os.chdir('E:/LRCBH/Results/1.PCA/v2')
+x = np.load('pca_tcat.npy')
+x1 = x[900:,:]
+pca_tcat4 = x1
+pca_tcat = pca_tcat.astype('float16')
+savemat('pca_tcat_part4.mat',{'pca_tcat4': pca_tcat4})
 
+
+# Dump from main script - Dated 1/10/2022 11:27 AM
+# Performing nii concatenation of all the subjects
+input_loc = 'E:/LRCBH/COBRE-MNI/Grp1-Controls'
+save_loc = 'E:/LRCBH/Concatenated/Grp1-controls'
+_nii_concat(input_loc, save_loc)
+# Getting the details of a template NIFTI image
+path = 'E:/LRCBH/Concatenated'
+file = 'MNI-008.nii'
+dim, vol, vox, trs, aff = _getnii_details(path, file)
+# Performing subject-wise PCA and temporal concatenation
+components = 100
+pca_tcat = temporal_concat(path, components, vox)
+# Performing final stage of PCA on the concatenated matrix
+pca_red_tcat = _do_PCA_v2(pca_tcat, 100)
+os.chdir('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA')
+# Saving the result as a mat file for ICA analysis in MATLAB
+savemat("pca_red.mat", {'pca_red_tcat': pca_red_tcat})
+# Importing the ICA result from MATLAB and saving as NIFTI images
+name = 'ica_red_mat'
+desloc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/gICA_SM'
+_save_ica_nifti(path, name, aff, vol, desloc)
+# Reducing the ICA dimensions space
+# Need to create a function
+# Performing dual regression
+save_l = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
+_dual_regression(ICA_mat, aff, vol, path, save_l)
+# FUNCTIONS NOT IN USE
+# CONCATENATION OF TRS TO GET 4D NIFTI FILE
+def _nii_concat(input_path, save_path):
+    for dirpath, dirs, filenames in os.walk(input_path):
+        for subdir in dirs:
+            subpath = os.path.join(input_path, subdir)
+            niilist = _get_list_of_ext(subpath, ".nii")
+            print('Performing nii concatenation for subject ' + str(subdir) + '...')
+            imgcat = nib.concat_images(niilist)
+            nib.save(imgcat, os.path.join(save_path, 'MNI-' + str(subdir) + '.nii'))
+            del imgcat
+            print('nii concatenation done for subject ' + str(subdir) + '.')
+    print('NII concatenation -- DONE')
+# DO SUBJECT WISE PCA AND SAVE THEM
+def _subject_PCA(location,n_comp,save_location):
+    list_of_nii = _get_list_of_ext(location, ".nii")
+    length = len(list_of_nii)
+    for i in range(length):
+        subloc = list_of_nii[i]
+        pat_img = nib.load(subloc)
+        voxtime_dat = _obtain_vt_data(pat_img).T
+        print("Performing PCA using " + str(n_comp) + " components for subject " + str(subloc[4:7]) + "...")
+        PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
+        if not os.path.exists(save_location):
+            os.makedirs(save_location)
+        np.save(os.path.join(save_location, 'PCA_' + str(subloc[4:7] + '.npy')), PCA_red)
+        print("PCA reduction done for subject " + str(subloc[4:7]) + ".")
+        del pat_img, voxtime_dat, PCA_red
+    print('PCA reduction -- DONE')
+
+loc = 'E:/LRCBH/Results/1.PCA/v1'
+pca_tcat = _temporal_concat(loc, vox)
+
+import h5py
+import hdf5storage
+
+hdf5storage.write(pca_tcat,pca_result,'pca_tcat_uw.mat',matlab_compatbile='True')
