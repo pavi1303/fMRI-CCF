@@ -1,5 +1,6 @@
-import os
+import os, shutil
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import nibabel as nib
 import seaborn as sns
@@ -8,6 +9,8 @@ from sklearn.decomposition import FastICA
 import scipy as sp
 from scipy.io import savemat
 from scipy.io import loadmat
+from nilearn.masking import apply_mask
+from nilearn.masking import unmask
 
 # ------------- List of sub functions ----------------- #
 # CENTERING BASED ON MEANS
@@ -41,6 +44,7 @@ def _get_list_of_ext(location,ext):
     for files in os.listdir():
         if files.endswith(ext):
             list_of_files.append(files)
+    list_of_files.sort()
     return list_of_files
 # GET THE DETAILS OF A TEMPLATE NII IMAGE
 def _getnii_details(location,filename):
@@ -84,17 +88,25 @@ def _shortlist_ICA(x,list_of_comp):
     return x_red
 # -------------------- List of main functions --------------- #
 # PERFORM NII CONCATENATION AND SINGLE SUBJECT PCA
-def _concat_subject_PCA(n_comp, input_path, save_path):
+def _mask_subject_PCA(n_comp, input_path, save_path, mask_path):
+    os.chdir(mask_path)
+    mask = nib.load('MNI_152_mask_v2.nii', mmap=False)
     for dirpath, dirs, filenames in os.walk(input_path):
         for subdir in dirs:
             subpath = os.path.join(input_path, subdir)
+            os.chdir(subpath)
             niilist = _get_list_of_ext(subpath, ".nii")
+            niilist.sort()
+            niilist = niilist[15:]
             print('Performing nii concatenation for subject ' + str(subdir) + '...')
-            pat_img = nib.concat_images(niilist)
-            print('nii concatenation done for subject ' + str(subdir) + '.')
-            voxtime_dat = _obtain_vt_data(pat_img).T
+            pat_img = nib.concat_images(niilist,)
+            print('Applying mask and obtaining time series data for subject ' + str(subdir) + '...')
+            os.chdir(mask_path)
+            voxtime_dat = apply_mask(pat_img, mask)
+            voxtime_dat = sp.stats.zscore(voxtime_dat, axis=1)
             print("Performing PCA using " + str(n_comp) + " components for subject " + str(subdir) + "...")
             PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
+            PCA_red = PCA_red.astype('float16')
             if not os.path.exists(save_path):
                 os.makedirs(save_path)
             np.save(os.path.join(save_path, 'PCA_' + str(subdir + '.npy')), PCA_red)
@@ -102,15 +114,16 @@ def _concat_subject_PCA(n_comp, input_path, save_path):
             del pat_img, voxtime_dat, PCA_red, subpath
     print('PCA reduction -- DONE')
 # PERFORM TEMPORAL CONCATENATION OF THE PCA COMPONENTS ACROSS SUBJECTS
-def _temporal_concat(location,n_vxl):
+def _temporal_concat(location,n_vxl, start, end):
     list_of_npy = _get_list_of_ext(location,".npy")
+    list_of_npy.sort()
+    list_of_npy = list_of_npy[start:end]
     length = len(list_of_npy)
     tempcat_dat = np.empty([1,n_vxl])
     for i in range(length):
         subloc = list_of_npy[i]
         pat_pca = np.load(subloc)
         pat_pca = pat_pca.astype('float16')
-        pat_pca = pat_pca[0:10, :]
         print("Performing temporal concatenation for subject " + str(subloc[4:7]) + "...")
         tempcat_dat = np.append(tempcat_dat, pat_pca, axis=0)
     print('Temporal concatenation -- DONE')
@@ -118,47 +131,54 @@ def _temporal_concat(location,n_vxl):
     return tempcat_dat
 # DO PCA ANALYSIS
 def _do_PCA_v2(x,n_components):
-    pca = PCA(n_components=n_components,whiten=False)
+    pca = PCA(n_components=n_components, whiten=False)
     pca_red = (pca.fit_transform(x.T)).T
     return pca_red
 # OUTPUTTING THE RESULT OF ICA ANALYSIS AS NIFTI
-def _save_ica_nifti(mat_loc,mat_filename,img_affine,vol_shape,dest_loc):
+def _save_ica_nifti(mat_loc,mat_filename,dest_loc, mask_path):
     os.chdir(mat_loc)
     ica_mat = loadmat(str(mat_filename) + '.mat')
     group_sm = ica_mat[mat_filename]
     # CONVERTING TO Z-SCORE MAPS
-    group_sm = sp.stats.zscore(group_sm,axis=1)
+    group_sm = sp.stats.zscore(group_sm, axis=1)
     # THRESHOLDING IF NECESSARY
     #group_sm[np.abs(group_sm) > thresh] = 0
     # RESHAPING THE ICA MATRIX TO 4D
-    group_sm_4D = group_sm.T.reshape(vol_shape+(group_sm.shape[0], ))
+    os.chdir(mask_path)
+    mask = nib.load('MNI_152_mask_v2.nii', mmap=False)
+    group_sm_4D = unmask(masked_img, mask)
+    #group_sm_4D = group_sm.T.reshape(vol_shape+(group_sm.shape[0], ))
     for i in range(group_sm.shape[0]):
         gica_comp = group_sm_4D[...,i]
-        gica_comp_img = nib.Nifti1Image(gica_comp,img_affine)
+        gica_comp_img = nib.Nifti1Image(gica_comp, mask.affine)
         if not os.path.exists(dest_loc):
             os.makedirs(dest_loc)
         nib.save(gica_comp_img, os.path.join(dest_loc, 'gICA_component_' + str(i + 1) + '.nii'))
         del gica_comp, gica_comp_img
 # DUAL REGRESSION
-def _dual_regression(img_affine, vol_shape, tc_loc, sm_loc, sub_path, mat_loc, mat_filename):
+def _dual_regression(tc_loc, sm_loc, sub_path, mat_loc, mat_filename):
     os.chdir(mat_loc)
     ica_mat = loadmat(str(mat_filename) + '.mat')
     group_sm = ica_mat[mat_filename]
     group_sm = sp.stats.zscore(group_sm, axis=1)
+    os.chdir(mask_path)
+    mask = nib.load('MNI_152_mask_v2.nii', mmap=False)
     for dirpath, dirs, filenames in os.walk(sub_path):
         for subdir in dirs:
             subpath = os.path.join(sub_path, subdir)
             niilist = _get_list_of_ext(subpath, ".nii")
+            niilist.sort()
+            niilist = niilist[15:]
             print('Performing nii concatenation for subject ' + str(subdir) + '...')
             pat_img = nib.concat_images(niilist)
-            print('Generating voxel time series data for subject ' + str(subdir) + '.')
-            ss_vt = _obtain_vt_data(pat_img)
+            print('Applying mask and obtaining time series data for subject ' + str(subdir) + '...')
+            ss_vt = apply_mask(pat_img, mask)
             # Dual regression I - Spatial regression
             print('Doing spatial regression for subject ' + str(subdir) + '...')
             ss_tc = np.dot(np.linalg.pinv(group_sm.T), ss_vt)
             if not os.path.exists(tc_loc):
                 os.makedirs(tc_loc)
-            np.save(os.path.join(tc_loc,'ss_tc_' + str(subdir) + '.npy'), ss_tc)
+            np.save(os.path.join(tc_loc, 'ss_tc_' + str(subdir) + '.npy'), ss_tc)
             print('Spatial regression -- DONE for subject ' + str(subdir) + '.')
             # Dual regression II - Temporal regression
             print('Doing temporal regression for subject ' + str(subdir) + '...')
@@ -168,10 +188,10 @@ def _dual_regression(img_affine, vol_shape, tc_loc, sm_loc, sub_path, mat_loc, m
             ss_saveloc = os.path.join(sm_loc, subdir)
             if not os.path.exists(ss_saveloc):
                 os.makedirs(ss_saveloc)
-            ss_sm_4D = ss_sm.T.reshape(vol_shape + (ss_sm.shape[0],))
+            ss_sm_4D = unmask(ss_sm, mask)
             for j in range(ss_sm.shape[0]):
                 ss_ica_comp = ss_sm_4D[..., j]
-                ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, img_affine)
+                ss_ica_comp_img = nib.Nifti1Image(ss_ica_comp, mask.affine)
                 nib.save(ss_ica_comp_img, os.path.join(ss_saveloc, 'ssICA_component_' + str(j + 1) + '.nii'))
                 del ss_ica_comp, ss_ica_comp_img
             print('Temporal regression -- DONE for subject ' + str(subdir) + '.')
@@ -195,32 +215,73 @@ def _dual_regression(img_affine, vol_shape, tc_loc, sm_loc, sub_path, mat_loc, m
 
 #----------------------My run 1-----------------------#
 # Path variables for all the save locations
-sub_loc = 'E:/LRCBH/COBRE-MNI/Trial'
+sub_loc = 'E:/LRCBH/COBRE-MNI/Individual_data/Exception'
+mask_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented'
 ss_pca = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA/Subject-wise'
 temp_nii = 'E:/LRCBH/COBRE-MNI'
 pca_result = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA/Final'
 ica_result = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA'
 ss_tc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_timecourses'
 ss_sm = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
+#--------------------COPYING NII FILES-----------------------------#
+# Copying the list of nii files to my PC location
+root_folder = 'Z:/COBRE_SCANS'
+smooth_folder = 'intermediate'
+dest_root = 'E:/LRCBH/COBRE-MNI/Individual_data'
+os.chdir('C:/Users/PATTIAP/Documents')
+df = pd.read_excel('Bold_location.xlsx', sheet_name='Bold')
+bold_folders = df['Names'].tolist()
+pat_loc = []
+for dirpath, dirs, filenames in os.walk(dest_root):
+    pat_loc.append(dirs)
+    pat_folders = pat_loc[0]
+    pat_folders.sort()
+length = len(pat_folders)
+# Performing the copying operation
+for i in range(length):
+    input_path = os.path.join(root_folder, pat_folders[i], bold_folders[i], smooth_folder)
+    save_path = os.path.join(dest_root, pat_folders[i])
+    niilist = []
+    if not os.path.exists(input_path):
+        print("Input path doesnt exist")
+    if not os.path.exists(save_path):
+        print("Input path doesnt exist")
+    for files in os.listdir(input_path):
+        if files.endswith('.nii') and files.startswith('s'):
+            niilist.append(files)
+            niilist.sort()
+    os.chdir(input_path)
+    print('Copying the nii files for subject ' + str(pat_folders[i] + '...'))
+    for f in niilist:
+        shutil.copy(f,save_path)
+    del niilist, input_path, save_path
+print('Copying operation -- DONE')
+#------------------------PCA REDUCTION------------------------------#
 # Performing subject wise dimensionality reduction - PCA
-comp = 10
-_concat_subject_PCA(comp, sub_loc, ss_pca)
+comp = 200
+_mask_subject_PCA(comp, sub_loc, ss_pca, mask_loc)
 # Getting the details from a template NIFTI image
 file = 'MNI-008.nii'
 dim, vol, vox, trs, aff = _getnii_details(temp_nii, file)
 # Performing temporal concatenation on the obtained subject PCA's
-pca_tcat = _temporal_concat(ss_pca, vox)
-np.save(os.path.join(pca_result, 'pca_tcat.npy'), pca_tcat)
+vox = 187997
+pca_tcat = _temporal_concat(ss_pca, vox, 100, 108)
+pca_tcat11 = pca_tcat.astype('float16')
+os.chdir(pca_result)
+savemat('pca_tcat11.mat', {'pca_tcat11': pca_tcat11})
+#np.save(os.path.join(pca_result, 'pca_tcat2.npy'), pca_tcat)
+#Saving the matlab variables in parts
+
 # Need to save the tcat variables into different parts of .mat variables
 # Performing final stage of PCA on the concatenated matrix - if necessary
 #Saving both the python and the matlab versions of the result
-pca_red_tcat = _do_PCA_v2(pca_tcat, 100)
-np.save(os.path.join(final_pca, 'pca_red_tcat.npy'), pca_red_tcat)
-os.chdir(final_pca)
-savemat('pca_red_tcat.mat', {'pca_red_tcat': pca_red_tcat})
+#pca_red_tcat = _do_PCA_v2(pca_tcat, 100)
+#np.save(os.path.join(final_pca, 'pca_red_tcat.npy'), pca_red_tcat)
+#os.chdir(final_pca)
+#savemat('pca_red_tcat.mat', {'pca_red_tcat': pca_red_tcat})
 # Importing the ICA result from MATLAB and saving as NIFTI images
 name = 'gICA_30'
-_save_ica_nifti(ica_result, name, aff, vol, ica_result)
+_save_ica_nifti(ica_result, name, ica_result, mask_loc)
 # Performing dual regression
 _dual_regression(aff, vol, ss_tc, ss_sm, sub_loc, ica_result, name)
 

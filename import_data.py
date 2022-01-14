@@ -287,3 +287,9 @@ def temporal_concat(location,n_comp,n_vxl,final_ncomp):
     PCA_red_f = (PCA_f.fit_transform(tempcat_dat.T)).T
     print('Final PCA reduction done')
     return PCA_red_f
+
+pat_loc =[]
+for dirpath, dirs,filenames in os.walk(dest_root):
+    pat_loc.append(dirs)
+    pat_folders = pat_loc[0]
+    pat_folders.sort()

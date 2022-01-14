@@ -1,4 +1,5 @@
 import os
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import nibabel as nib
@@ -671,4 +672,194 @@ pca_tcat = _temporal_concat(loc, vox)
 import h5py
 import hdf5storage
 
-hdf5storage.write(pca_tcat,pca_result,'pca_tcat_uw.mat',matlab_compatbile='True')
+hdf5storage.write(pca_tcat,pca_result,'pca_tcat_uw.mat',matlab_compatible='True')
+os.getcwd()
+
+# Trying out the masking operation
+mask_loc = 'C:/Users/PATTIAP/Downloads'
+os.chdir(mask_loc)
+c1 = nib.load('c1MNI152_T1_2mm.nii')
+c2 = nib.load('c2MNI152_T1_2mm.nii')
+mask = nib.load('MNI_152_mask_v2.nii', mmap = False)
+gm_wm_mask = c1+c2
+subpath = 'E:/LRCBH/COBRE-MNI/Trial/008'
+os.chdir(subpath)
+niilist = _get_list_of_ext(subpath, ".nii")
+niilist.sort()
+niilist = niilist[5:]
+imgcat = nib.concat_images(niilist)
+data = imgcat.get_fdata()
+from nilearn.input_data import NiftiMasker
+import cv2
+NiftiMasker.fit_transform(imgcat,mask)
+os.chdir(subpath)
+img1 = nib.load(niilist[0])
+mask_data = mask.get_fdata()
+mask.affine = aff
+masked_img = data*mask_data
+masked_img = cv2.bitwise_and(mask_data,data)
+from nilearn.masking import apply_mask
+imgcat_mask = apply_mask(imgcat,mask)
+img_mask_nii = imgcat_mask.reshape(vol+(imgcat_mask.shape[0], ))
+aff = mask.affine
+vol = imgcat.shape
+from nilearn.image import resample_img
+mask_rs = resample_img(mask,target_affine=aff,interpolation='nearest',target_shape=(91,109,91))
+imgcat1 = nib.Nifti1Image(img_mask_nii, imgcat.affine)
+nib.save(imgcat1,os.path.join(subpath,'MNI_008_masked.nii'))
+slice1 = data[...,0]
+masked_img = cv2.bitwise_and(mask_data,slice1)
+img_masked = data*mask_data
+imgcat1 = nib.Nifti1Image(masked_img,aff)
+nib.save(imgcat1,os.path.join(subpath,'MNI_012_00001_masked.nii'))
+os.chdir(subpath)
+img =nib.load('MNI_012_00001.nii', mmap = False)
+data = img.get_fdata()
+masked_img = np.multiply()
+def _apply_mask(mask, niilist):
+    niilist.sort()
+    length = len(niilist)
+    for i in range(length):
+        img = nib.load(niilist[i], mmap = False)
+        data = img.get_fdata()
+        masked_img = cv2.bitwise_and(data,mask)
+del imgcat
+del img_mask_nii
+
+
+# Testing the masking function
+#Loading the mask file
+mask_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented'
+os.chdir(mask_loc)
+mask = nib.load('MNI_152_mask_v2.nii', mmap = False)
+# Loading the folder contianing the subject niis
+subpath = 'C:/Users/PATTIAP/Desktop/Dataset/008'
+os.chdir(subpath)
+niilist = _get_list_of_ext(subpath, ".nii")
+niilist.sort()
+niilist = niilist[15:]
+imgcat = nib.concat_images(niilist)
+os.chdir(mask_loc)
+from nilearn.masking import apply_mask
+masked_img = apply_mask(imgcat,mask)
+from nilearn.masking import unmask
+unmasked_img = unmask(masked_img, mask)
+nib.save(imgcat, os.path.join(subpath, 'MNI-008_unmasked.nii'))
+nib.save(unmasked_img, os.path.join(subpath, 'MNI-008_unmasked.nii'))
+del imgcat, masked_img, niilist
+os.chdir(ss_pca)
+x = np.load('PCA_013.npy')
+x_inf = np.where(np.isinf(pca_tcat11))
+def _concat_subject_PCA(n_comp, input_path, save_path, mask_loc):
+    os.chdir(mask_loc)
+    mask = nib.load('MNI_152_mask_v2.nii', mmap=False)
+    for dirpath, dirs, filenames in os.walk(input_path):
+        for subdir in dirs:
+            subpath = os.path.join(input_path, subdir)
+            os.chdir(subpath)
+            niilist = _get_list_of_ext(subpath, ".nii")
+            niilist.sort()
+            niilist = niilist[5:]
+            print('Performing nii concatenation for subject ' + str(subdir) + '...')
+            pat_img = nib.concat_images(niilist)
+            print('Applying mask and obtaining time series data for subject ' + str(subdir) + '.')
+            os.chdir(mask_loc)
+            voxtime_dat = apply_mask(pat_img, mask)
+            print("Performing PCA using " + str(n_comp) + " components for subject " + str(subdir) + "...")
+            PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
+            if not os.path.exists(save_path):
+                os.makedirs(save_path)
+            np.save(os.path.join(save_path, 'PCA_' + str(subdir + '.npy')), PCA_red)
+            print("PCA reduction done for subject " + str(subdir) + ".")
+            del pat_img, voxtime_dat, PCA_red, subpath
+    print('PCA reduction -- DONE')
+
+# Remove the files in a directory of subdirectories
+dir = 'E:/LRCBH/COBRE-MNI/Individual_data'
+for dirpath, dirs, filenames in os.walk(dir):
+    for subdir in dirs:
+        for f in os.listdir(os.path.join(dir,subdir)):
+            os.remove(os.path.join(dir,subdir,f))
+
+# Copy the files from directory A to B
+dir = 'Z:/COBRE_SCANS/008'
+dir1 = '105924618_012_cmrr_mbep2d_bold_AP_MB8_2mm_ISO_20171009'
+dir2 = 'intermediate'
+dest = 'E:/LRCBH/COBRE-MNI/Individual_data/008'
+path = os.path.join(dir,dir1,dir2)
+niilist = []
+import shutil
+for files in os.listdir(path):
+    if files.endswith('.nii') and files.startswith('s'):
+        niilist.append(files)
+        niilist.sort()
+os.chdir(path)
+for f in niilist:
+    shutil.copy(f,dest)
+# Copying the .nii files from the shared drive to my desired location
+# Creating all the required directories
+import os, shutil
+root_folder = 'Z:/COBRE_SCANS'
+smooth_folder = 'intermediate'
+dest_root = 'E:\LRCBH\COBRE-MNI\Individual_data'
+# Getting the bold folders
+import pandas as pd
+os.chdir('C:/Users/PATTIAP/Documents')
+df = pd.read_excel('Bold_location.xlsx', sheet_name='Bold')
+bold_folders = df['Names'].tolist()
+pat_loc = []
+for dirpath, dirs,filenames in os.walk(dest_root):
+    pat_loc.append(dirs)
+    pat_folders = pat_loc[0]
+    pat_folders.sort()
+    pat_folders = pat_folders[0:30]
+length = len(pat_folders)
+# Performing the copying operation
+for i in range(length):
+    input_path = os.path.join(root_folder,pat_folders[i],bold_folders[i],smooth_folder)
+    save_path = os.path.join(dest_root,pat_folders[i])
+    niilist = []
+    if not os.path.exists(input_path):
+        os.makedirs(save_path)
+    if not os.path.exists(save_path):
+            os.makedirs(save_path)
+    for files in os.listdir(input_path):
+        if files.endswith('.nii') and files.startswith('s'):
+            niilist.append(files)
+            niilist.sort()
+    os.chdir(input_path)
+    print('Copying the nii files for subject ' + str(pat_folders[i] + '...'))
+    for f in niilist:
+        shutil.copy(f,save_path)
+    del niilist, input_path, save_path
+print('Copying operation -- DONE')
+
+import os
+import nibabel as nib
+import cv2
+import numpy as np
+from nilearn.masking import apply_mask
+
+os.chdir('C:/Users/PATTIAP/Desktop/Dataset')
+os.chdir('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented')
+img = nib.load('s8_MNI_012_00001.nii', mmap = False)
+img_data = img.get_fdata()
+img_masked = apply_mask(img, mask)
+mask = nib.load('MNI_152_mask_v2.nii', mmap = False)
+nib.save(mask, os.path.join('C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented', 'MNI_mask_v3.nii'))
+mask_data = mask.get_fdata()
+is_all_zero = np.all((mask_data == 0))
+masked_img = cv2.bitwise_and(img_data, mask_data)
+imgcat1 = nib.Nifti1Image(masked_img,img.affine)
+nib.save(imgcat1, os.path.join('C:/Users/PATTIAP/Desktop/Dataset/008', 's8_MNI_012_00001_masked.nii'))
+
+
+os.chdir(ss_pca)
+x = np.load('PCA_008.npy')
+x_inf = np.where(np.isinf(img_data))
+x_img = nib.load('MNI-008_masked.nii')
+img_data = x_img.get_fdata()
+
+arr = np.random.rand(2,3)
+arr_mean = np.mean(arr,axis=1)
+arr_z = sp.stats.zscore(arr,axis=1)
