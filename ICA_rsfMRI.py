@@ -266,10 +266,10 @@ file = 'MNI-008.nii'
 dim, vol, vox, trs, aff = _getnii_details(temp_nii, file)
 # Performing temporal concatenation on the obtained subject PCA's
 vox = 187997
-pca_tcat = _temporal_concat(ss_pca, vox, 2, 4)
-pca_tcat2 = pca_tcat.astype('float16')
+pca_tcat = _temporal_concat(ss_pca, vox, 6, 8)
+pca_tcat4= pca_tcat.astype('float16')
 os.chdir(ss_pca)
-savemat('pca_tcat_trial2.mat', {'pca_tcat2': pca_tcat2})
+savemat('pca_tcat_trial4.mat', {'pca_tcat4': pca_tcat4})
 #np.save(os.path.join(pca_result, 'pca_tcat2.npy'), pca_tcat)
 #Saving the matlab variables in parts
 
