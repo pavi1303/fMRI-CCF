@@ -26,14 +26,26 @@ niftiwrite(img_masked,'MNI-008_masked.nii',inform);
 
 niftiwrite(img_masked,'MNI_masked.nii',inform);
 
-[S1,W1,White1,E1,eigval1,convergence1,A1,B1,A_reduced1,X_reduced1,Sigma_reduced1]=ica_DC_improved(pca_tcat,0,11,1E-6,30,[],1,1,[])
+method=11;
+a1=1;
+var_normal=1;
+eps=1E-6;
+A0=[];
+shift=[];
+Sigma=0;
+determine_flip=1;
+npca=30;
 
+[S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=...
+    ica_DC_improved_v1(pca_tcat_1,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip);
+
+(X,Sigma,method,eps,npca,A0,a1,var_normal,shift)
 sliceViewer(mask);
 pca_tcat = vertcat(pca_tcat1,pca_tcat2,pca_tcat3,pca_tcat4);
 metric_z = zscore(Metric);
 mm = mean(Metric);
 mm_sd = std(Metric)
-gICA_30 = X_reduced1
+gICA_30_trial = X_reduced;
 
 info_mask= niftiinfo('MNI_masked1.nii');
 info_mask.Transform.T = aff
@@ -56,3 +68,6 @@ cd('C:\Users\PATTIAP\Desktop\COBRE_VF\Results\1.PCA\Final')
 pca_tcat_1 = vertcat(pca_tcat1,pca_tcat2,pca_tcat3,pca_tcat4,pca_tcat5);
 pca_tcat_2 = vertcat(pca_tcat6,pca_tcat7,pca_tcat8,pca_tcat9,pca_tcat10,pca_tcat11);
 pca_tcat = vertcat(pca_tcat_1, pca_tcat_2);
+
+gICA_30_vt  = double(X_reduced);
+ICA_4D = reshape(gICA_30,[91,109,91]);

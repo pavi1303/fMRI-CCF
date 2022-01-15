@@ -731,7 +731,7 @@ del img_mask_nii
 #Loading the mask file
 mask_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented'
 os.chdir(mask_loc)
-mask = nib.load('MNI_152_mask_v2.nii', mmap = False)
+
 # Loading the folder contianing the subject niis
 subpath = 'C:/Users/PATTIAP/Desktop/Dataset/008'
 os.chdir(subpath)
@@ -740,10 +740,16 @@ niilist.sort()
 niilist = niilist[15:]
 imgcat = nib.concat_images(niilist)
 os.chdir(mask_loc)
+os.chdir(ica_result)
+ica_res = loadmat('gICA_30.mat')
+gICA = ica_res['gICA_30']
+gICA_nii = nib.Nifti2Image(gICA,mask.affine)
+mask = nib.load('MNI_152_mask_v2.nii', mmap = False)
 from nilearn.masking import apply_mask
 masked_img = apply_mask(imgcat,mask)
 from nilearn.masking import unmask
-unmasked_img = unmask(masked_img, mask)
+unmasked_img = unmask(gICA, mask)
+nib.save(unmasked_img, os.path.join(ica_result, 'gICA_30.nii'))
 nib.save(imgcat, os.path.join(subpath, 'MNI-008_unmasked.nii'))
 nib.save(unmasked_img, os.path.join(subpath, 'MNI-008_unmasked.nii'))
 del imgcat, masked_img, niilist
