@@ -105,14 +105,15 @@ def _mask_subject_PCA(input_path, save_path, mask_path, n_comp):
             voxtime_dat = apply_mask(pat_img, mask)
             voxtime_dat = sp.stats.zscore(voxtime_dat, axis=0)
             print("Performing PCA using " + str(n_comp) + " components for subject " + str(subdir) + "...")
-            PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
-            if not os.path.exists(save_path):
-                os.makedirs(save_path)
+            #PCA_red = _do_PCA_v2(voxtime_dat, n_comp)
+            #if not os.path.exists(save_path):
+            #    os.makedirs(save_path)
             os.chdir(save_path)
-            savemat('PCA_' + str(subdir) + '.mat', {'PCA_red': PCA_red})
+            #savemat('PCA_' + str(subdir) + '.mat', {'PCA_red': PCA_red})
+            savemat('vt_' + str(subdir) + '.mat', {'voxtime_dat': voxtime_dat})
             #np.save(os.path.join(save_path, 'PCA_' + str(subdir) + '.npy'), PCA_red)
             print("PCA reduction done for subject " + str(subdir) + ".")
-            del pat_img, voxtime_dat, subpath, PCA_red
+            del pat_img, voxtime_dat, subpath
     print('PCA reduction -- DONE')
 # PERFORM TEMPORAL CONCATENATION OF THE PCA COMPONENTS ACROSS SUBJECTS
 def _temporal_concat(location,n_vxl, start, end):
@@ -141,7 +142,7 @@ def _save_ica_nifti(mat_loc,mat_filename,dest_loc, mask_path):
     ica_mat = loadmat(str(mat_filename) + '.mat')
     group_sm = ica_mat[mat_filename]
     # CONVERTING TO Z-SCORE MAPS
-    #group_sm = sp.stats.zscore(group_sm, axis=1)
+    group_sm = sp.stats.zscore(group_sm, axis=0)
     # RESHAPING THE ICA MATRIX TO 4D
     os.chdir(mask_path)
     mask = nib.load('MNI_152_mask_new.nii', mmap=False)
@@ -215,12 +216,12 @@ def _dual_regression(tc_loc, sm_loc, sub_path, mat_loc, mat_filename):
 
 #----------------------My run 1-----------------------#
 # Path variables for all the save locations
-sub_loc = 'E:/LRCBH/COBRE-MNI/Individual_data'
+sub_loc = 'E:/LRCBH/COBRE-MNI/Trial'
 mask_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented'
-ss_pca = 'E:/LRCBH/Results/1.PCA/Updated/With_standardization'
+ss_pca = 'E:/LRCBH/Results/1.PCA/Trial'
 temp_nii = 'E:/LRCBH/COBRE-MNI'
 pca_result = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA/Final'
-ica_result = 'E:/LRCBH/Results/2.ICA/updated/Original'
+ica_result = 'E:/LRCBH/Results/2.ICA/updated/With standard'
 ss_tc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_timecourses'
 ss_sm = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
 #--------------------COPYING NII FILES-----------------------------#
@@ -279,8 +280,8 @@ savemat('pca_tcat_trial5.mat', {'pca_tcat5': pca_tcat5})
 #os.chdir(final_pca)
 #savemat('pca_red_tcat.mat', {'pca_red_tcat': pca_red_tcat})
 # Importing the ICA result from MATLAB and saving as NIFTI images
-name = 'gICA_30_pca'
-_save_ica_nifti(ica_result, name, ica_result, mask_loc)
+name = 'gICA_30_vt'
+_save_ica_nifti(ss_pca, name, ss_pca, mask_loc)
 # Performing dual regression
 _dual_regression(aff, vol, ss_tc, ss_sm, sub_loc, ica_result, name)
 
