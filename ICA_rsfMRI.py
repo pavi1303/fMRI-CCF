@@ -141,7 +141,7 @@ def _save_ica_nifti(mat_loc,mat_filename,dest_loc, mask_path):
     ica_mat = loadmat(str(mat_filename) + '.mat')
     group_sm = ica_mat[mat_filename]
     # CONVERTING TO Z-SCORE MAPS
-    group_sm = sp.stats.zscore(group_sm, axis=1)
+    #group_sm = sp.stats.zscore(group_sm, axis=1)
     # RESHAPING THE ICA MATRIX TO 4D
     os.chdir(mask_path)
     mask = nib.load('MNI_152_mask_new.nii', mmap=False)
@@ -153,7 +153,7 @@ def _save_ica_nifti(mat_loc,mat_filename,dest_loc, mask_path):
         gica_comp_img = nib.Nifti1Image(gica_comp, mask.affine)
         if not os.path.exists(dest_loc):
             os.makedirs(dest_loc)
-        nib.save(gica_comp_img, os.path.join(dest_loc, 'gICA_component_vt_' + str(i + 1) + '.nii'))
+        nib.save(gica_comp_img, os.path.join(dest_loc, 'gICA_component_' + str(i + 1) + '.nii'))
         del gica_comp, gica_comp_img
 # DUAL REGRESSION
 def _dual_regression(tc_loc, sm_loc, sub_path, mat_loc, mat_filename):
@@ -220,7 +220,7 @@ mask_loc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/MNI_segmented'
 ss_pca = 'E:/LRCBH/Results/1.PCA/Updated/With_standardization'
 temp_nii = 'E:/LRCBH/COBRE-MNI'
 pca_result = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/1.PCA/Final'
-ica_result = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/2.ICA/Trial/No_PCA'
+ica_result = 'E:/LRCBH/Results/2.ICA/updated/Original'
 ss_tc = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_timecourses'
 ss_sm = 'C:/Users/PATTIAP/Desktop/COBRE_VF/Results/3.DR/Subject_spatialmaps'
 #--------------------COPYING NII FILES-----------------------------#
@@ -279,7 +279,7 @@ savemat('pca_tcat_trial5.mat', {'pca_tcat5': pca_tcat5})
 #os.chdir(final_pca)
 #savemat('pca_red_tcat.mat', {'pca_red_tcat': pca_red_tcat})
 # Importing the ICA result from MATLAB and saving as NIFTI images
-name = 'gICA_30_vt_v2'
+name = 'gICA_30_pca'
 _save_ica_nifti(ica_result, name, ica_result, mask_loc)
 # Performing dual regression
 _dual_regression(aff, vol, ss_tc, ss_sm, sub_loc, ica_result, name)

@@ -1,33 +1,32 @@
-function [S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=ica_DC_improved(X,Sigma,method,eps,npca,A0,a1,var_normal,shift)
+function [S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=ica_DC_improved(X,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip)
 %ICA algorithm with noise covariance, 3/29/05,2/5/06 Dietmar Cordes, Ph.D.
 disp('improved ICA');
 format long g;
 epsilon=eps;
-[tdim qmax]=size(X);
+[tdim,qmax]=size(X);
 cases=method;
 if cases > 10
-    Sigma=zeros(tdim);
+    Sigma=0;
 end
 
 %remove mean over space, do not normalize to var=1
-mean_x=mean(X');
-X=X-mean_x'*ones(1,qmax);
-stdXp=std(X');
-
-%PCA reduction if necessary
-C=cov(X');
+mean_x=mean(X,2);
+X=X-mean_x*ones(1,qmax);
+C=1/(qmax-1)*(X*X');
+%stdXp=std(X');
+%C=cov(X');
 rankC=rank(C);
 [E,eigval,explained]=pcacov(C-Sigma); 
 EE=E(:,1:npca);
 X_tilde=EE'*X;
-
 %whitening
 White=(diag(eigval(1:npca)))^(-1/2);
 if rank(White) < npca
     error('something is wrong in ica');
 end
 X_tilde=White*X_tilde;
-X_reduced=X_tilde;
+X_reduced=X_tilde;    
+
 
 %transformed noise covariance
 if cases==2
@@ -58,7 +57,7 @@ for conv=1:5
     B_old=zeros(npca);
     B_old2=zeros(npca);
     
-    for it=1:500
+    for it=1:1000
         arg=B'*X_tilde;     % i x t    t x q
     
         switch cases
@@ -170,11 +169,43 @@ B_reduced=B;
 %normalize the sources to unit variance (over the voxels)
 if var_normal==1
     std_S=std(S');
-    S=S ./ (std_S'*ones(1,qmax));
+    S=S ./ (std_S'*ones(1,qmax));  % unit variance, actually a one sample t test;
     W=W ./ (std_S'*ones(1,npca));
     A=A .* (ones(tdim,1)*std_S);
     A_reduced=A_reduced .* (ones(npca,1)*std_S);
     disp('sources were variance normalized');
 end
-return;
+%TC=X*pinv(S);  %time courses, note A=TC (this was tested)
 
+% the following flips the sign of the IC component and TC component to be consistent with the data
+% find the voxel index where IC is large or small
+if determine_flip==1
+  if npca > 2  %correlation coefficient is defined only for function with more than 2 time frames
+    for i=1:npca 
+        zscore=10;
+        q_index=[];
+        while length(q_index) <100
+            q_index=find(abs(S(i,:))>zscore);   %is row vector
+            zscore=zscore*0.95;
+            if zscore < 0.5
+                break;
+            end
+        end
+        if zscore < 0.5
+                continue;
+        end
+        % compute correlation coefficients of real time courses and IC time courses for those voxel
+        YY=[X(:,q_index) A(:,i)]; %
+        R=corrcoef(YY);
+        L=length(q_index);
+        RR=sum(R(1:L,L+1));   % is row vector
+        if RR<0
+             S(i,:)=-S(i,:);
+             A(:,i)=-A(:,i);
+             A_reduced(:,i)=-A_reduced(:,i);
+        end
+    end
+  end %if npca
+end %if determine_flip
+
+end %ICA program
