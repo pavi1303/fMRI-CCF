@@ -293,3 +293,6 @@ for dirpath, dirs,filenames in os.walk(dest_root):
     pat_loc.append(dirs)
     pat_folders = pat_loc[0]
     pat_folders.sort()
+
+os.chdir(mask_loc)
+mask = nib.load('MNI_152_mask_new.nii', mmap=False)

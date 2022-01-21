@@ -3,8 +3,6 @@ addpath(genpath('C:\Users\PATTIAP\Documents\GitHub\fMRI-multimodal\Multivariate 
 addpath(genpath('C:\Users\PATTIAP\Desktop\COBRE_VF\Results'))
 addpath(genpath('E:\LRCBH\Results\XZ_sample'))
 
-clc
-clear all
 % % Creating the nifti mask
 % c1 = niftiread('c1MNI152_T1_2mm.nii');
 % c2 = niftiread('c2MNI152_T1_2mm.nii');
@@ -26,7 +24,7 @@ clear all
 % niftiwrite(mask,'MNI_152_mask.nii',mask_header);
 
 %%% Vertical concatenation of the data
- list = [8,13,16,21,23,24,27,28,29,37,38,42,43,45,46,47,48,49,50,51,52,54,55,62,66,68,69,70,72,...
+list = [8,13,16,21,23,24,27,28,29,37,38,42,43,45,46,47,48,49,50,51,52,54,55,62,66,68,69,70,72,...
     73,74,75,78,84,85,86,89,92,93,96,98,101,105,110,116,117,127,129,131,132,134,135,140,143,...
     147,150,151,153,155,157,158,159,167,169,170,174,175,176,177,178,185,187,190,191,192,...
     194,196,199,200,201,203,206,207,209,210,211,212,214,215,216,217,218,219,220,221,...
@@ -44,7 +42,6 @@ end
 pca_tcat = cellfun(@vertcat, pat_data);
 tcat_data = vertcat(pca_tcat{:});
 clearvars -except tcat_data
-fprintf('Temporal concatenation done for %d subjects', (size(tcat_data,1)/200));
 %%%%%%%------Doing the ICA-----------------------------%%%%%%%%%%%%
 method=11;
 a1=1;
@@ -60,5 +57,4 @@ npca=30;
     ica_DC_improved(tcat_data,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip);
 
 cd('E:\LRCBH\Results\2.ICA\With_standard');
-gICA_30_v2 = S; 
-save('gICA_30_v2.mat', 'gICA_30_v2');
+save

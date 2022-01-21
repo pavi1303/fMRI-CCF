@@ -869,3 +869,6 @@ img_data = x_img.get_fdata()
 arr = np.random.rand(2,3)
 arr_mean = np.mean(arr,axis=1)
 arr_z = sp.stats.zscore(arr,axis=1)
+x = loadmat('PCA_008.mat')
+data = x['PCA_red']
+x_inf = np.where(np.isinf(data))

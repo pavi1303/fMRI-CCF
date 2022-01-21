@@ -10,8 +10,8 @@ if cases > 10
 end
 
 %remove mean over space, do not normalize to var=1
-mean_x=mean(X,2);
-X=X-mean_x*ones(1,qmax);
+% mean_x=mean(X,2);
+% X=X-mean_x*ones(1,qmax);
 C=1/(qmax-1)*(X*X');
 %stdXp=std(X');
 %C=cov(X');
