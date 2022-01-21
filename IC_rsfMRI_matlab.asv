@@ -58,17 +58,30 @@ trs = 850;
 % then I save th result of PCA as a mat variable. 
 cd('W:\008');
 files = dir('*.nii');
-temp = zeros(trs, 228453);
+temp = zeros(trs, xres*yres*zres);
 for j = 1:length(files)
     i = load_untouch_nii(files(j).name);
     I = i.img;
     I_M = I.*M;
-    vt = reshape(I_M, [1, xres, yres, zres]);
     vt = zscore(nonzeros(vt)');
+    vt = reshape(I_M, [1,xres*yres*zres]);
+    %vt = nonzeros(vt)';
     temp(j,:) = vt;
-    clear temp, vt, vt, i, I
+    clear vt, i, I;
 end
+[~,v] = find(temp);
 vt_data = temp(16:end, :);
+X = vt_data;
+%PCA analysis in matlab
+X = X - mean(X,2);
+c = cov(X');
+[E,eigval,explained]=pcacov(c); 
+EE=E(:,1:200);
+X_tilde=EE'*X;
+
+mean_x=mean(X,2);
+[coeff,score] = pca(vt_data);
+reduced = score(
     
     
     

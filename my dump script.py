@@ -879,3 +879,9 @@ x = loadmat('PCA_008.mat')
 x = x['PCA_red']
 x_inf = np.where(np.isinf(x))
 >>>>>>> Stashed changes
+os.chdir('W:/008')
+x = nib.load('s8_MNI_012_00001.nii', mmap = False)
+data = x.get_fdata()
+maskloc = 'W:/008'
+mask = nib.load('standard_binary.nii', mmap = False)
+masked = apply_mask(x, mask)
