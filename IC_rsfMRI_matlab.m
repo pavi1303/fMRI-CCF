@@ -20,11 +20,12 @@ mask = load_untouch_nii('standard_binary.nii');
 mask_data = mask.img;
 vt_data = xyz_to_q_ALT(data.img);
 %Applying mask
-masked_data = bsxfun(@times, img_data, mask_data);
-[x,y,z] = size(masked_data);
+masked_data = bsxfun(@times, img, mask_data);
+[x,y,z] = size(mask_data);
 masked_img = permute(masked_data, [4, 1, 2, 3]);
 vt_data = reshape(masked_data, [1, x*y*z]);
 vt_data_modified = nonzeros(vt_data)';
+vt_data_modified = zscore(vt_data_modified);
 ig_size = masked_img.
 %%% For iterating through different folders
 basePath = pwd;  %your base path which is in your case myTraining  
@@ -42,3 +43,43 @@ for i=1:length(foldersNames), %loop through all folders
         img = imread(files(j).name); % read each image and do what you want 
     end
 end 
+
+% My try 1 for masking the image from a patient subfolder
+% Loading of the mask file way outside the for loop and getting its
+% dimensions
+cd('C:\Users\pavig\Downloads');
+m = load_untouch_nii('standard_binary.nii');
+M = m.img;
+[xres, yres, zres] = size(M);
+% Get the number of time series from the user
+trs = 850;
+% This is the inner for loop where the generation of the voxel time data
+% happens and the conversion of the PCA also happens for each subject and
+% then I save th result of PCA as a mat variable. 
+cd('W:\008');
+files = dir('*.nii');
+temp = zeros(trs, 228453);
+for j = 1:length(files)
+    i = load_untouch_nii(files(j).name);
+    I = i.img;
+    I_M = I.*M;
+    vt = reshape(I_M, [1, xres, yres, zres]);
+    vt = zscore(nonzeros(vt)');
+    temp(j,:) = vt;
+    clear vt, i, I;
+end
+vt_data = temp(16:end, :);
+X = vt_data;
+mean_x=mean(X,2);
+[coeff,score,latent,~,explained] = pca(vt_data);
+    
+    
+    
+% You load the mask image outside the for loop
+j =1;
+data = load_untouch_nii(files(j).name);
+img = data.img;
+img_masked = img.*mask_data;
+vt_data = reshape(img_masked, [1, x*y*z]);
+vt = nonzeros(vt_data)';
+vt = zscore(vt);
