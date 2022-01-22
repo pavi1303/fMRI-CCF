@@ -2,8 +2,9 @@
 clc
 clear
 tic
-rootdir = 'E:\LRCBH\Data\COBRE-MNI\Trial';
+rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data';
 savedir = 'E:\LRCBH\Results\Matlab\1.PCA';
+ica_savedir = 'E:\LRCBH\Results\Matlab\2.ICA';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
@@ -33,4 +34,25 @@ for i=1:length(subloc)
     save(fullfile(savedir, sprintf('PCA_%s.mat',suboi)),'PCA_red');
 end
 fprintf('PCA reduction done.\n');
+% Doing temporal concatenation of the subjects
+fprintf('Performing temporal concatenation of subjects...\n');
+tcat_data = temporal_concat(subloc,savedir);
+fprintf('Temporal concatenation done.\n')
+clearvars -except tcat_data
+% Performing spatial ICA based on hyperbolic tangent
+method=11;
+a1=1;
+var_normal=1;
+eps=1E-6;
+A0=[];
+shift=[];
+Sigma=0;
+determine_flip=1;
+npca=30;
+
+[S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=...
+    ica_DC_improved(tcat_data,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip);
+save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','White','-v7.3');
 toc
+
+

@@ -292,9 +292,26 @@ for i in range(length):
 print('Copying operation -- DONE')
 
 
+#CHECKING MY PCA OPERATION
+os.chdir('E:/LRCBH/Old/Results/1.PCA/Trial')
+x = loadmat('vt_008.mat')
+x_mean = np.mean(data, axis =0)
+data = x['voxtime_dat']
+c = np.cov(data)
+u, s, v = np.linalg.svd(c)
+W = u[:, 0:200]
+# Projection of the PCA components to the original data matrix
+pca = (np.dot(data.T, W)).T
+data_red = _do_PCA_v2(data, 200)
 
-
-
+os.chdir('E:/ICA_test_sub008_2017')
+Ydata = loadmat('Ydata.mat')
+dat = Ydata['Ydata']
+c = np.cov(dat)
+u, s, v = np.linalg.svd(c)
+W = u[:, 0:100]
+# Projection of the PCA components to the original data matrix
+pca = (np.dot(dat.T, W)).T
 
 
 
