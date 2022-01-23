@@ -28,7 +28,7 @@ for i=1:length(subloc)
     temp = zeros(trs, 228453);
     fprintf('Generating voxeltime data for subject %s...\n',suboi);
     [temp,index] = generate_vt(files,M,x,y,z);
-    vt_data = double(zscore(temp(16:end, :),1));
+    vt_data = double(zscore(temp(16:end, :)));
     clear temp;
     fprintf('Performing PCA reduction using %d components for subject %s...\n',comp,suboi);
     %Performing subject wise PCA reduction
