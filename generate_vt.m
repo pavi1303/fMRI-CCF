@@ -1,4 +1,4 @@
-function [data] = generate_vt(list_of_files, mask, xres, yres, zres)
+function [data,idx] = generate_vt(list_of_files, mask, xres, yres, zres)
 for j=1:length(list_of_files)
     i = load_untouch_nii(list_of_files(j).name);
     I = i.img;
