@@ -7,6 +7,7 @@ rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data';
 pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA';
 ica_savedir = 'E:\LRCBH\Results\Matlab\2.ICA';
 dr_savedir = 'E:\LRCBH\Results\Matlab\3.DR';
+fcn_savedir='E:\LRCBH\Results\Matlab\4.FCN';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
@@ -93,6 +94,22 @@ for i =1:length(subloc)
     save_ica_nii(ss_sm',x,y,z,indices,m,ss_dr_dir);
 end
 fprintf('Dual regression done.\n')
+
+
+%Generating the FCN matrix
+dirpath = dir(dr_savedir);
+subdir = [dirpath(:).isdir];
+subpath = {dirpath(subdir).name}';
+subpath(ismember(subpath,{'.','..'})) = [];
+for i=1:length(subpath)
+    sub = subpath{i};
+    current = strcat(dr_savedir,'\', sub);
+    cd(current);
+    dr = load('dualregression.mat','ss_tc');
+    tc = (dr.ss_tc)';
+    fcn = corrcoef(tc);
+    save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
+end
 
 
 %List of inputs to the dual regression function
