@@ -6,7 +6,6 @@ tic
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data';
 pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA';
 ica_savedir = 'E:\LRCBH\Results\Matlab\2.ICA';
-dr_savedir = 'E:\LRCBH\Results\Matlab\3.DR';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
@@ -62,11 +61,24 @@ save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','White
 toc
 
 %Saving the individual ica components as nii files
-ica_dat = load('gICA_30_result.mat','S');
-S = ica_dat.S;
-save_ica_nii(S,x,y,z,indices,m,ica_savedir)
-
+save_ica_nii(S,x,y,z,indices,)
+for j = 1:size(S,1)
+    temp = zeros(1, x*y*z);
+    ica_comp = S(j,:);
+    temp(1,indices) = ica_comp;
+    ica_3d = reshape(temp,[x,y,z]);
+    nii_temp = m;
+    nii_temp.img = [];
+    nii_temp.img = single(ica_3d);
+    Sname = ['ica_',sprintf(['%03d.nii'],j)];
+    save_untouch_nii(nii_temp,[ica_savedir,'\',Sname]);
+end
 % Doing dual regression
+cd(ica_savedir);
+ica_result=load('gica_30_result.mat');
+dr_savedir = 'E:\LRCBH\Results\Matlab\3.DR';
+pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Trial';
+S=ica_result.S;
 noise_idx = [2,4,11,13,14,17,18,19,28,23];
 %Using only the useful components
 S(noise_idx,:)=[];
@@ -79,7 +91,6 @@ for i =1:length(subloc)
     current = strcat(pca_savedir,'\', suboi);
     sub_data = load(current,'vt_data');
     sub_data = (sub_data.vt_data)';
-    fprintf('Performing dual regression for subject %s...\n',suboi(5:7));
     %Performing spatial regression
     ss_tc = (pinv(S))'*sub_data;
     %Performing temporal regression
@@ -92,8 +103,13 @@ for i =1:length(subloc)
     % Saving the independent components as nii images
     save_ica_nii(ss_sm',x,y,z,indices,m,ss_dr_dir);
 end
-fprintf('Dual regression done.\n')
 
+
+
+    i=1;
+
+    x = (pinv(ss_tc));
+    x=x';
 
 %List of inputs to the dual regression function
 % The group ICA map
