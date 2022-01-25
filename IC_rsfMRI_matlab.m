@@ -96,7 +96,7 @@ end
 fprintf('Dual regression done.\n')
 
 
-%Generating the FCN matrix
+% Generating the FCN matrix
 dirpath = dir(dr_savedir);
 subdir = [dirpath(:).isdir];
 subpath = {dirpath(subdir).name}';
@@ -111,10 +111,27 @@ for i=1:length(subpath)
     save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
 end
 
+% Controlling for confounds
+% Getting the directory having the subject wise FNC matrix data
+dirloc = dir(fcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for i =1:length(subloc)
+    suboi = subloc{i};
+    current = strcat(fcn_savedir,'\', suboi);
+    sub_data = load(current,'fcn');
+    sub_data = (sub_data.fcn)';
+    corr_mat = tril(sub_data,-1);
+    corr_vec = nonzeros(corr_mat);
+    fnc_val{i,1} = corr_vec';
+end
+% Trying out linear regression
+%Data formation
+Y = vertcat(fnc_val{:});
 
-%List of inputs to the dual regression function
-% The group ICA map
-% the noise components indices
-% dual regression save dir
-% pca directory (voxel time data files)
-heatmap(R);
+fluency = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 3 107 3]);
+age = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 4 107 4]);
+ed = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 5 107 5]);
+suvr = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 6 107 6]);
+grp = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 7 107 7]);
+
