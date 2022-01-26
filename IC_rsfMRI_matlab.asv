@@ -151,6 +151,7 @@ for k = 1:size(Y,2)
  end
 p-val
 [b1,~,~,~,stats1] = regress(Y(:,1),X_grp1);
+mdl = fitlm(X_grp1,Y(:,1));
 stats(3,:) = stats(3,:)/size(Y,2);
 p = 0.05/size(Y,2);
 idx = find(stats(3,:)<p);
@@ -172,6 +173,10 @@ S_grp2 = struct;
 %  cerebellar networks
 % 2. Generate a powerpoint with all the useful group ICA networks with what
 % the networks are
+% 3. Prepare the list of inferences from the tasks from other papers as
+% well as from the notion slide
 
 
-
+X_1 = X_grp1(:,1);
+x1 = ones(size(X_1,1),1);
+X_1 = [X_1 x1];

@@ -151,6 +151,7 @@ for k = 1:size(Y,2)
  end
 p-val
 [b1,~,~,~,stats1] = regress(Y(:,1),X_grp1);
+mdl = fitlm(X_grp1,Y(:,1));
 stats(3,:) = stats(3,:)/size(Y,2);
 p = 0.05/size(Y,2);
 idx = find(stats(3,:)<p);
@@ -174,5 +175,13 @@ S_grp2 = struct;
 % the networks are
 % 3. Prepare the list of inferences from the tasks from other papers as
 % well as from the notion slide
+
+
+X_1 = X_grp1(:,1);
+x1 = ones(size(X_1,1),1);
+X_1 = [X_1 x1];
+[S1_grp1.coeff, S1_grp1.pval, S1_grp1.stats, S1_grp1.comparisons, S1_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
+
+
 
 
