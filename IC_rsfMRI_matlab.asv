@@ -113,6 +113,20 @@ end
 
 % Controlling for confounds
 % Getting the directory having the subject wise FNC matrix data
+fcn_savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1';
+%fcn_Savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2';
+
+% Generating the design matrix
+fluency = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 3 89 3]);
+age = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 4 89 4]);
+ed = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 5 89 5]);
+suvr = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 6 89 6]);
+%grp = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 7 89 7]);
+X = horzcat(fluency, age, ed, suvr);
+x = ones(size(X,1),1);
+X = [X x];
+X_grp1 = X(1:44,:);
+
 dirloc = dir(fcn_savedir);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
@@ -125,13 +139,30 @@ for i =1:length(subloc)
     corr_vec = nonzeros(corr_mat);
     fnc_val{i,1} = corr_vec';
 end
-% Trying out linear regression
-%Data formation
-y_data = vertcat(fnc_val{:});
+% Forming the Y data
+Y = vertcat(fnc_val{:});
+% Performing regression to obtain coefficients
+for k=1:size(Y,2)
+    lr_model{k,1} = fitlm(X,Y(:,k));
+end
 
-age = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 3 107 3]);
-age = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 4 107 4]);
-ed = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 4 107 5]);
-suvr = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 5 107 5]);
-grp = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 6 107 6]);
+for k = 1:size(Y,2)
+     [b(:,k),~,~,~,stats(:,k)] = regress(Y(:,k),X_grp1);
+ end
+p-val
+[b1,~,~,~,stats1] = regress(Y(:,1),X_grp1);
+stats(3,:) = stats(3,:)/size(Y,2);
+p = 0.05/size(Y,2);
+idx = find(stats(3,:)<p);
 
+%
+[row,col] = find(corr_mat);
+idx1 = horzcat(row,col);
+sig_idx = idx1(idx,:);
+% Inputs for the confound function
+% Directory of the functional connectivity matrices
+% The design matrix
+[coeff,pval_corr,stats_corrected,n_compar,sig_loc]
+S_grp1 =struct;
+S_grp2 = struct;
+[S_grp1.coeff, S_grp1.pval, S_grp1.stats] = confound_sig(fcn_savedir,X,'fcn',corrmat);
