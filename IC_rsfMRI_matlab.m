@@ -166,6 +166,7 @@ sig_idx = idx1(idx,:);
 S_grp1 =struct;
 S_grp2 = struct;
 [S_grp1.coeff, S_grp1.pval, S_grp1.stats, S_grp1.comparisons, S_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
-
+%  Find the significant associations with and without the inclusion of
+%  cerebellar networks
 
 

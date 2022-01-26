@@ -1,4 +1,4 @@
-function [coeff,pval_corr,stats_corrected,n_compar,sig_loc] = confound_sig(fcn_dir, X, var_name,corrmat_template)
+function [coeff,pval_corr,stats,n_compar,sig_loc] = confound_sig(fcn_dir, X, var_name,corrmat_template)
 % Finding the non-zero networks
 corr_mat = tril(corrmat_template,-1);
 [row,col] = find(corr_mat);
@@ -24,8 +24,8 @@ for k = 1:size(Y,2)
 end
 % Correcting for multiple comparisons
 n_compar = size(Y,2);
-stats_corrected = stats(3,:)/n_compar;
-pval_corr = 0.5/n_compar;
-sig_idx = find(stats_corrected<pval_corr);
-sig_loc = nz_loc(sig_idx);
+stats(3,:) = stats(3,:)/n_compar;
+pval_corr = 0.05/n_compar;
+sig_idx = find(stats(3,:)<pval_corr);
+sig_loc = nz_loc(sig_idx,:);
 end
