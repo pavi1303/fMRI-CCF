@@ -113,8 +113,8 @@ end
 
 % Controlling for confounds
 % Getting the directory having the subject wise FNC matrix data
-fcn_savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1';
-%fcn_Savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2';
+%fcn_savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1';
+fcn_Savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2';
 
 % Generating the design matrix
 fluency = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 3 89 3]);
@@ -126,7 +126,7 @@ X = horzcat(fluency, age, ed, suvr);
 x = ones(size(X,1),1);
 X = [X x];
 X_grp1 = X(1:44,:);
-
+X_grp2 = X(45:end,:);
 dirloc = dir(fcn_savedir);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
@@ -166,7 +166,13 @@ sig_idx = idx1(idx,:);
 S_grp1 =struct;
 S_grp2 = struct;
 [S_grp1.coeff, S_grp1.pval, S_grp1.stats, S_grp1.comparisons, S_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
-%  Find the significant associations with and without the inclusion of
+[S_grp2.coeff, S_grp2.pval, S_grp2.stats, S_grp2.comparisons, S_grp2.sig_asso] = confound_sig(fcn_savedir,X_grp2,'fcn',corr_mat);
+% Things to do
+% 1. Find the significant associations with and without the 
 %  cerebellar networks
+% 2. Generate a powerpoint with all the useful group ICA networks with what
+% the networks are
+% 3. Prepare the list of inferences from the tasks from other papers as
+% well as from the notion slide
 
 
