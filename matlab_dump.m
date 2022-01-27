@@ -183,3 +183,49 @@ vt = zscore(vt);
 %getting the individual slices of the 4D ICA data.
 % [5] Test this out on the trial dataset. If it works - then now run the
 % program and go to sleep. Check the results tomorrow. 
+
+fcn_savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\All';
+dirloc = dir(fcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for i =1:length(subloc)
+    suboi = subloc{i};
+    current = strcat(fcn_savedir,'\', suboi);
+    sub_data = load(current,'fcn');
+    sub_data = (sub_data.fcn)';
+    corr_mat = tril(sub_data,-1);
+    corr_vec = nonzeros(corr_mat);
+    fnc_val{i,1} = corr_vec';
+end
+% Forming the Y data
+Y = vertcat(fnc_val{:});
+% Performing regression to obtain coefficients
+for k=1:size(Y,2)
+    lr_model{k,1} = fitlm(X(:,1:4),Y(:,k));
+    Y_fitted(:,k) = lr_model{k,1}.Fitted;
+end
+
+for k = 1:size(Y,2)
+     [b(:,k),~,~,~,stats(:,k)] = regress(Y(:,k),X_grp1);
+ end
+p-val
+[b1,~,~,~,stats1] = regress(Y(:,1),X_grp1);
+mdl = fitlm(X_grp1,Y(:,1));
+stats(3,:) = stats(3,:)/size(Y,2);
+p = 0.05/size(Y,2);
+idx = find(stats(3,:)<p);
+
+%
+[row,col] = find(corr_mat);
+idx1 = horzcat(row,col);
+sig_idx = idx1(idx,:);
+% Inputs for the confound function
+% Directory of the functional connectivity matrices
+% The design matrix
+[coeff,pval_corr,stats_corrected,n_compar,sig_loc]
+S_grp1 =struct;
+S_grp2 = struct;
+
+%Using the regress function
+[S_grp1.coeff, S_grp1.pval, S_grp1.stats, S_grp1.comparisons, S_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
+[S_grp2.coeff, S_grp2.pval, S_grp2.stats, S_grp2.comparisons, S_grp2.sig_asso] = confound_sig(fcn_savedir,X_grp2,'fcn',corr_mat);

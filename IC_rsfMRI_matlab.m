@@ -8,6 +8,7 @@ pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA';
 ica_savedir = 'E:\LRCBH\Results\Matlab\2.ICA';
 dr_savedir = 'E:\LRCBH\Results\Matlab\3.DR';
 fcn_savedir='E:\LRCBH\Results\Matlab\4.FCN';
+asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
@@ -111,77 +112,52 @@ for i=1:length(subpath)
     save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
 end
 
-% Controlling for confounds
-% Getting the directory having the subject wise FNC matrix data
-%fcn_savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1';
-fcn_Savedir = 'E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2';
-
+% Controlling for confounds and finding significant associations
 % Generating the design matrix
-fluency = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 3 89 3]);
-age = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 4 89 4]);
-ed = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 5 89 5]);
-suvr = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 6 89 6]);
-%grp = readmatrix('EXCEL_Language_Control_Study_2021-12-03-023219028 (Autosaved).xlsx','Sheet','regression','Range',[2 7 89 7]);
-X = horzcat(fluency, age, ed, suvr);
-x = ones(size(X,1),1);
-X = [X x];
-X_grp1 = X(1:44,:);
-X_grp2 = X(45:end,:);
-dirloc = dir(fcn_savedir);
-subloc = {dirloc.name}';
-subloc(ismember(subloc,{'.','..'})) = [];
-for i =1:length(subloc)
-    suboi = subloc{i};
-    current = strcat(fcn_savedir,'\', suboi);
-    sub_data = load(current,'fcn');
-    sub_data = (sub_data.fcn)';
-    corr_mat = tril(sub_data,-1);
-    corr_vec = nonzeros(corr_mat);
-    fnc_val{i,1} = corr_vec';
-end
-% Forming the Y data
-Y = vertcat(fnc_val{:});
-% Performing regression to obtain coefficients
-for k=1:size(Y,2)
-    lr_model{k,1} = fitlm(X,Y(:,k));
-end
+fluency_ratio = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
+pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
+sf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
+age = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
+ed = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 5 89 5]);
+suvr = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
+grp = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
+X = horzcat(fluency_ratio, age, ed, suvr, grp);
+X1 = horzcat(fluency_ratio, age, ed, suvr);
+X_grp1 = X1(1:44,:);
+X_grp2 = X1(45:end,:);
 
-for k = 1:size(Y,2)
-     [b(:,k),~,~,~,stats(:,k)] = regress(Y(:,k),X_grp1);
- end
-p-val
-[b1,~,~,~,stats1] = regress(Y(:,1),X_grp1);
-mdl = fitlm(X_grp1,Y(:,1));
-stats(3,:) = stats(3,:)/size(Y,2);
-p = 0.05/size(Y,2);
-idx = find(stats(3,:)<p);
+% Fitting the linear regression model 
+[grp1_res.Yfitted,grp1_res.Yfitted_sig,grp1_res.beta, ...
+    grp1_res.pvalue, grp1_res.pval_sig, grp1_res.tstatistic,grp1_res.alpha,grp1_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1',X_grp1,'fcn', 19,'grp1',asso_savedir);
+[grp2_res.Yfitted,grp2_res.Yfitted_sig,grp2_res.beta,...
+    grp2_res.pvalue, grp2_res.pval_sig,grp2_res.tstatistic,grp2_res.alpha,grp2_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2',X_grp2,'fcn', 19,'grp2',asso_savedir);
+[grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
+    grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
+
+% Generating the scatter plot (VF vs FC)
+VF = repmat(fluency_ratio,[1 16]);
+Y = grp_res.Yfitted_sig;
+g = horzcat(repmat(1,[1,44]),repmat(0,[1,44]))';
+h = gscatter(VF,Y,g);
+gscatter(fluency_ratio,Y(:,1),g)
 
 %
-[row,col] = find(corr_mat);
-idx1 = horzcat(row,col);
-sig_idx = idx1(idx,:);
-% Inputs for the confound function
-% Directory of the functional connectivity matrices
-% The design matrix
-[coeff,pval_corr,stats_corrected,n_compar,sig_loc]
-S_grp1 =struct;
-S_grp2 = struct;
-[S_grp1.coeff, S_grp1.pval, S_grp1.stats, S_grp1.comparisons, S_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
-[S_grp2.coeff, S_grp2.pval, S_grp2.stats, S_grp2.comparisons, S_grp2.sig_asso] = confound_sig(fcn_savedir,X_grp2,'fcn',corr_mat);
-% Things to do
-% 1. Find the significant associations with and without the 
-%  cerebellar networks
-% 2. Generate a powerpoint with all the useful group ICA networks with what
-% the networks are
-% 3. Prepare the list of inferences from the tasks from other papers as
-% well as from the notion slide
+[f1,xi1] = ksdensity(pf);
+[f2,xi2] = ksdensity(sf);
+[f3,xi3] = ksdensity(fluency_ratio);
 
+figure;
+plot(xi1,f1)
+lgd = legend('Phonemic fluency');
+title('pd estimate - Phonemic fluency');
+figure;
+plot(xi2,f2)
+lgd = legend('Semantic fluency');
+title('pd estimate - Semantic fluency');
+figure;
+plot(xi3,f3)
+lgd = legend('Fluency ratio');
+title('pd estimate - Fluency ratio');
 
-X_1 = X_grp1(:,1);
-x1 = ones(size(X_1,1),1);
-X_1 = [X_1 x1];
-[S1_grp1.coeff, S1_grp1.pval, S1_grp1.stats, S1_grp1.comparisons, S1_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
-
-
-
-
+pval = 0.05;
+pval_adjusted = 0.05/171;
