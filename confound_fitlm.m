@@ -1,43 +1,36 @@
-function [Yfitted, Yfitted_sig,beta,pval,pval_sig,tstat,alpha_level,sig_loc] = confound_fitlm(fcn_dir, X, var_name,no_rsn,save_prefix,savepath)
+function regress_model(dr_dir, regressor, interaction, covariates, var_name,rsn_no,save_prefix,savepath)
 % Initializing the alpha value
 alpha_level = 0.05;
-% Finding the non-zero networks
-c = corrcoef(rand(no_rsn,835)');
-corr_mat = tril(c,-1);
-[row,col] = find(corr_mat);
-nz_loc = horzcat(row,col);
-% Loading the functional connectivity matrix
-dirloc = dir(fcn_dir);
-subloc = {dirloc.name}';
+% Loading the subject specific spatial maps
+dirloc = dir(dr_dir);
+subdir = [dirloc(:).isdir];
+subloc = {dirloc(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
 for i =1:length(subloc)
     suboi = subloc{i};
-    current = strcat(fcn_dir,'\', suboi);
-    sub_data = load(current,var_name);
-    sub_data = (sub_data.fcn)';
-    sub_data(2,:) = [];
-    sub_data(:,2) = [];
-    corr_mat = tril(sub_data,-1);
-    corr_vec = nonzeros(corr_mat);
-    fnc_val{i,1} = corr_vec';
+    current = strcat(dr_dir,'\', suboi);
+    cd(current);
+    sub_sm = load(var_name);
+    sub_sm = (sub_sm.ss_sm)';
+    sub_smoi(i,:) = sub_sm(rsn_no,:);
 end
 % Forming the Y data
-Y = vertcat(fnc_val{:});
+Y = sub_smoi;
+%Forming the data matix
+X = horzcat(regressor,interaction,covariates);% With interaction
 % Preforming regression
 for k=1:size(Y,2)
     lr_model{k,1} = fitlm(X,Y(:,k),'RobustOpts','ols');
     beta(k,:) = lr_model{k,1}.Coefficients.Estimate;
-    pval(k,:) = lr_model{k,1}.Coefficients.pValue;
-    Yfitted(:,k) = lr_model{k,1}.Fitted;                                 
+    pval(k,:) = lr_model{k,1}.Coefficients.pValue;            
     tstat(k,:) = lr_model{k,1}.Coefficients.tStat;
 end
 % Correcting for multiple comparisons
-n_compar = size(Y,2);
-p_val_measure = (pval(:,2))';
+% n_compar = size(Y,2);
+pval_interaction = (pval(:,4))';% For the interaction term
+%pval_measure = (pval(:,1))';% For the fluency term
 %alpha_level = 0.05/n_compar;
-sig_idx = find(p_val_measure<alpha_level);
-pval_sig = p_val_measure(:,sig_idx);
-Yfitted_sig = Yfitted(:,sig_idx);
-sig_loc = nz_loc(sig_idx,:);
-save(fullfile(savepath, sprintf('fcn_association_%s.mat',save_prefix)),'beta','pval','tstat','alpha_level','sig_loc');
+sig_idx= find(p_val_interaction<alpha_level);
+sig_voxel = vertcat(sig_idx,p_val_interaction(:,sig_idx));
+save(fullfile(savepath, sprintf('sm_association_%s.mat',save_prefix)),'lr_model','beta','pval','tstat','alpha_level','pval_interaction','sig_voxel');
 end

@@ -11,7 +11,7 @@ fcn_savedir='E:\LRCBH\Results\Matlab\4.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
-subloc = {dirpath(subdir).name}';
+subloc = {dirpath(subdir).name}'; 
 subloc(ismember(subloc,{'.','..'})) = [];
 %Loading the mask file
 cd('E:\LRCBH\MNI_segmented');
@@ -97,7 +97,7 @@ end
 fprintf('Dual regression done.\n')
 
 
-% Generating the FCN matrix
+% Generating the FCN matrix - not needed now 
 dirpath = dir(dr_savedir);
 subdir = [dirpath(:).isdir];
 subpath = {dirpath(subdir).name}';
@@ -114,26 +114,24 @@ end
 
 % Controlling for confounds and finding significant associations
 % Generating the design matrix
-fluency_ratio = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
-pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
-sf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
-age = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
-ed = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 5 89 5]);
-suvr = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
-grp = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
-X = horzcat(fluency_ratio, age, ed, suvr, grp);
-X1 = horzcat(fluency_ratio, age, ed, suvr);
-X_grp1 = X1(1:44,:);
-X_grp2 = X1(45:end,:);
-
-% Fitting the linear regression model 
-[grp1_res.Yfitted,grp1_res.Yfitted_sig,grp1_res.beta, ...
-    grp1_res.pvalue, grp1_res.pval_sig, grp1_res.tstatistic,grp1_res.alpha,grp1_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\Grp1',X_grp1,'fcn', 19,'grp1',asso_savedir);
-[grp2_res.Yfitted,grp2_res.Yfitted_sig,grp2_res.beta,...
-    grp2_res.pvalue, grp2_res.pval_sig,grp2_res.tstatistic,grp2_res.alpha,grp2_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\Grp2',X_grp2,'fcn', 19,'grp2',asso_savedir);
+fluency_ratio = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
+% pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
+% sf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
+age = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
+ed = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 5 89 5]);
+suvr = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
+grp = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
+regressor = horzcat(fluency_ratio, grp);
+covariates = horzcat(age, ed, suvr);
+interaction = fluency_ratio.*grp;
+ 
+% Fitting the general linear model
+% With the interaction term
 [grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
     grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
-
+% Without the interaction term
+[grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
+    grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
 % Generating the scatter plot (VF vs FC)
 VF = repmat(fluency_ratio,[1 16]);
 Y = grp_res.Yfitted_sig;
@@ -161,3 +159,15 @@ title('pd estimate - Fluency ratio');
 
 pval = 0.05;
 pval_adjusted = 0.05/171;
+dr_dir='E:\LRCBH\Results\Matlab\3.DR';
+var_name = 'dualregression';
+% Testing the assumptions for the multiple linear regression model
+X = horzcat(regressor,interaction,covariates);
+k=1;
+lr_model{k,1} = fitlm(X,Y(:,k),'RobustOpts','ols');
+interaction = [];
+pval = rand(1,100);
+sig_idx = rand(1,100);
+details = ["voxel index","p-value"];
+sig_voxel = vertcat(sig_idx,pval);
+
