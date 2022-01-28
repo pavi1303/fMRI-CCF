@@ -15,7 +15,7 @@ for i =1:length(subloc)
     sub_smoi(i,:) = sub_sm(rsn_no,:);
 end
 % Forming the Y data
-Y = sub_smoi(:,1:100);
+Y = sub_smoi;
 %Forming the data matix
 X = horzcat(regressor,interaction,covariates);
 % Preforming regression
