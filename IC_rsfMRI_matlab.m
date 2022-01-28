@@ -112,7 +112,7 @@ for i=1:length(subpath)
     save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
 end
 
-% Controlling for confounds and finding significant associations
+
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
 % pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
@@ -125,49 +125,23 @@ regressor = horzcat(fluency_ratio, grp);
 covariates = horzcat(age, ed, suvr);
 interaction = fluency_ratio.*grp;
  
-% Fitting the general linear model
+% Fitting the multiple linear regression model
 % With the interaction term
-[grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
-    grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
+[regress_nointer.X, regress_nointer.Y, regress_nointer.fit_model, regress_nointer.betas, regress_nointer.pvalue, ...
+    regress_nointer.tstatistic, regress_nointer.alpha_level, regress_nointer.pval_interactionvar, regress_nointer.meanRsquared_original, regress_nointer.meanRsquared_adjusted, regress_nointer.sig_voxel] = ...
+    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,interaction, covariates,'dualregression',14,'interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
 % Without the interaction term
 [grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
     grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
-% Generating the scatter plot (VF vs FC)
-VF = repmat(fluency_ratio,[1 16]);
-Y = grp_res.Yfitted_sig;
-g = horzcat(repmat(1,[1,44]),repmat(0,[1,44]))';
-h = gscatter(VF,Y,g);
-gscatter(fluency_ratio,Y(:,1),g)
 
-%
-[f1,xi1] = ksdensity(pf);
-[f2,xi2] = ksdensity(sf);
-[f3,xi3] = ksdensity(fluency_ratio);
+% Run and make sure it runs; slightly modify the code so that you save the
+% R2 coefficient and the mean Rsquared value as well.
 
-figure;
-plot(xi1,f1)
-lgd = legend('Phonemic fluency');
-title('pd estimate - Phonemic fluency');
-figure;
-plot(xi2,f2)
-lgd = legend('Semantic fluency');
-title('pd estimate - Semantic fluency');
-figure;
-plot(xi3,f3)
-lgd = legend('Fluency ratio');
-title('pd estimate - Fluency ratio');
-
-pval = 0.05;
-pval_adjusted = 0.05/171;
-dr_dir='E:\LRCBH\Results\Matlab\3.DR';
-var_name = 'dualregression';
-% Testing the assumptions for the multiple linear regression model
-X = horzcat(regressor,interaction,covariates);
-k=1;
-lr_model{k,1} = fitlm(X,Y(:,k),'RobustOpts','ols');
-interaction = [];
-pval = rand(1,100);
-sig_idx = rand(1,100);
-details = ["voxel index","p-value"];
-sig_voxel = vertcat(sig_idx,pval);
-
+Y = reg_nointer.Y;
+lr_model = reg_nointer.fit_model;
+for k = 1:size(Y,2)
+    Rsquared_orig(k,:) = fit_model{k,1}.Rsquared.Ordinary;
+    Rsquared_adjust(k,:) = fit_model{k,1}.Rsquared.Adjusted;
+end
+Rsquared_orig_mean = mean(Rsquared_orig);
+Rsquared_adjust_mean = mean(Rsquared_adjust);

@@ -229,3 +229,43 @@ S_grp2 = struct;
 %Using the regress function
 [S_grp1.coeff, S_grp1.pval, S_grp1.stats, S_grp1.comparisons, S_grp1.sig_asso] = confound_sig(fcn_savedir,X_grp1,'fcn',corr_mat);
 [S_grp2.coeff, S_grp2.pval, S_grp2.stats, S_grp2.comparisons, S_grp2.sig_asso] = confound_sig(fcn_savedir,X_grp2,'fcn',corr_mat);
+
+% Generating the scatter plot (VF vs FC)
+VF = repmat(fluency_ratio,[1 16]);
+Y = grp_res.Yfitted_sig;
+g = horzcat(repmat(1,[1,44]),repmat(0,[1,44]))';
+h = gscatter(VF,Y,g);
+gscatter(fluency_ratio,Y(:,1),g)
+
+%
+[f1,xi1] = ksdensity(pf);
+[f2,xi2] = ksdensity(sf);
+[f3,xi3] = ksdensity(fluency_ratio);
+
+figure;
+plot(xi1,f1)
+lgd = legend('Phonemic fluency');
+title('pd estimate - Phonemic fluency');
+figure;
+plot(xi2,f2)
+lgd = legend('Semantic fluency');
+title('pd estimate - Semantic fluency');
+figure;
+plot(xi3,f3)
+lgd = legend('Fluency ratio');
+title('pd estimate - Fluency ratio');
+
+pval = 0.05;
+pval_adjusted = 0.05/171;
+dr_dir='E:\LRCBH\Results\Matlab\3.DR';
+var_name = 'dualregression';
+% Testing the assumptions for the multiple linear regression model
+X = horzcat(regressor,interaction,covariates);
+k=1;
+lr_model{k,1} = fitlm(X,Y(:,k),'RobustOpts','ols');
+interaction = [];
+pval = rand(1,100);
+sig_idx = rand(1,100);
+details = ["voxel index","p-value"];
+sig_voxel = vertcat(sig_idx,pval);
+

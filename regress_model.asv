@@ -1,4 +1,4 @@
-function regress_model(dr_dir, regressor, interaction, covariates, var_name,rsn_no,save_prefix,savepath)
+function [X,Y,] = regress_model(dr_dir, regressor, interaction, covariates, var_name,rsn_no,save_prefix,savepath)
 % Initializing the alpha value
 alpha_level = 0.05;
 % Loading the subject specific spatial maps
@@ -15,14 +15,14 @@ for i =1:length(subloc)
     sub_smoi(i,:) = sub_sm(rsn_no,:);
 end
 % Forming the Y data
-Y = sub_smoi;
+Y = sub_smoi(:,1:);
 %Forming the data matix
-X = horzcat(regressor,interaction,covariates);% With interaction
+X = horzcat(regressor,interaction,covariates);
 % Preforming regression
 for k=1:size(Y,2)
     lr_model{k,1} = fitlm(X,Y(:,k),'RobustOpts','ols');
     beta(k,:) = lr_model{k,1}.Coefficients.Estimate;
-    pval(k,:) = lr_model{k,1}.Coefficients.pValue;            
+    pval(k,:) = lr_model{k,1}.Coefficients.pValue;
     tstat(k,:) = lr_model{k,1}.Coefficients.tStat;
 end
 % Correcting for multiple comparisons
@@ -32,5 +32,5 @@ pval_interaction = (pval(:,4))';% For the interaction term
 %alpha_level = 0.05/n_compar;
 sig_idx= find(p_val_interaction<alpha_level);
 sig_voxel = vertcat(sig_idx,p_val_interaction(:,sig_idx));
-save(fullfile(savepath, sprintf('sm_association_%s.mat',save_prefix)),'lr_model','beta','pval','tstat','alpha_level','pval_interaction','sig_voxel');
+save(fullfile(savepath, sprintf('regress_model_%s.mat',save_prefix)),'X','Y','lr_model','beta','pval','tstat','alpha_level','pval_interaction','sig_voxel');
 end
