@@ -37,5 +37,6 @@ pval_interaction = (pval(:,4))';% For the interaction term
 %alpha_level = 0.05/n_compar;
 sig_idx= find(pval_interaction<alpha_level);
 sig_voxel = vertcat(sig_idx,pval_interaction(:,sig_idx));
-save(fullfile(savepath, sprintf('regress_model_%s.mat',save_prefix)),'X','Y','lr_model','coeff','pval','tstat','Rsquared_orig','Rsquared_adjust','Rsquared_orig_mean','Rsquared_adjust_mean','alpha_level','pval_interaction','sig_voxel');
+save(fullfile(savepath, sprintf('regress_model_%s.mat',save_prefix)),'X','Y','lr_model','coeff',...
+    'pval','tstat','Rsquared_orig','Rsquared_adjust','Rsquared_orig_mean','Rsquared_adjust_mean','alpha_level','pval_interaction','sig_voxel');
 end
