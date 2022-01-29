@@ -127,21 +127,35 @@ interaction = fluency_ratio.*grp;
  
 % Fitting the multiple linear regression model
 % With the interaction term
-[regress_nointer.X, regress_nointer.Y, regress_nointer.fit_model, regress_nointer.betas, regress_nointer.pvalue, ...
-    regress_nointer.tstatistic, regress_nointer.alpha_level, regress_nointer.pval_interactionvar, regress_nointer.meanRsquared_original, regress_nointer.meanRsquared_adjusted, regress_nointer.sig_voxel] = ...
-    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,interaction, covariates,'dualregression',14,'interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
+[regress_withinter.X, regress_withinter.Y, regress_withinter.fit_model, regress_withinter.betas, regress_withinter.pvalue, ...
+    regress_withinter.tstatistic, regress_withinter.alpha_level, regress_withinter.pval_interactionvar, ...
+    regress_withinter.meanRsquared_original, regress_withinter.meanRsquared_adjusted, regress_withinter.sig_voxel] = ...
+    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,interaction, covariates,'dualregression',14,'with_interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
 % Without the interaction term
-[grp_res.Yfitted,grp_res.Yfitted_sig,grp_res.beta, ...
-    grp_res.pvalue, grp_res.pval_sig,grp_res.tstatistic,grp_res.alpha,grp_res.sig_asso] = confound_fitlm('E:\LRCBH\Results\Matlab\v2\4.FCN\All',X,'fcn', 19,'all',asso_savedir);
+[regress_withinter.X, regress_withinter.Y, regress_withinter.fit_model, regress_withinter.betas, regress_withinter.pvalue, ...
+    regress_withinter.tstatistic, regress_withinter.alpha_level, regress_withinter.pval_interactionvar, ...
+    regress_withinter.meanRsquared_original, regress_withinter.meanRsquared_adjusted, regress_withinter.sig_voxel] = ...
+    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,[], covariates,'dualregression',14,'no_interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
 
-% Run and make sure it runs; slightly modify the code so that you save the
-% R2 coefficient and the mean Rsquared value as well.
-
-Y = reg_nointer.Y;
-lr_model = reg_nointer.fit_model;
-for k = 1:size(Y,2)
-    Rsquared_orig(k,:) = fit_model{k,1}.Rsquared.Ordinary;
-    Rsquared_adjust(k,:) = fit_model{k,1}.Rsquared.Adjusted;
+% Testing the assumptions of the regression model
+% 1. Linear relationship
+Y_mean = mean(Y,2);
+X = horzcat(regressor, interaction, covariates);
+for j = 1:size(X,2)
+    figure;
+    scatter(X(:,j),Y_mean);
 end
-Rsquared_orig_mean = mean(Rsquared_orig);
-Rsquared_adjust_mean = mean(Rsquared_adjust);
+scatter(X(:,6),Y_mean,'filled');
+lsline;
+title('Testing linear relationship');
+ylabel('y - Dependent variable')
+%xlabel('x1 - Fluency ratio');
+%xlabel('x2 - Group ID');
+%xlabel('x3 - Interaction term');
+%xlabel('x4 - Age');
+%xlabel('x5 - Education');
+xlabel('x6 - SUVR');
+x2 = horzcat(Y_mean(1:44,:),Y_mean(45:end,:));
+boxplot(x2);
+x6 = sqrt(X(:,6));
+scatter(x6,Y_mean,'filled');

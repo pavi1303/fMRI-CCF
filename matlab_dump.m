@@ -268,4 +268,21 @@ pval = rand(1,100);
 sig_idx = rand(1,100);
 details = ["voxel index","p-value"];
 sig_voxel = vertcat(sig_idx,pval);
-
+% Getting the Y variable
+dr_dir = 'E:\LRCBH\Results\Matlab\3.DR\Unbiased'
+var_name = 'dualregression';
+rsn_no = 14;
+dirloc = dir(dr_dir);
+subdir = [dirloc(:).isdir];
+subloc = {dirloc(subdir).name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for i =1:length(subloc)
+    suboi = subloc{i};
+    current = strcat(dr_dir,'\', suboi);
+    cd(current);
+    sub_sm = load(var_name);
+    sub_sm = (sub_sm.ss_sm)';
+    sub_smoi(i,:) = sub_sm(rsn_no,:);
+end
+% Forming the Y data
+Y = sub_smoi;

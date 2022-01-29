@@ -313,7 +313,7 @@ W = u[:, 0:100]
 # Projection of the PCA components to the original data matrix
 pca = (np.dot(dat.T, W)).T
 
-# Plotting the scatter plot for each of the
+# Creating a group scatter plot with regression line 
 
 
 
