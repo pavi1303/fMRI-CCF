@@ -11,7 +11,7 @@ fcn_savedir='E:\LRCBH\Results\Matlab\4.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
-subloc = {dirpath(subdir).name}'; 
+subloc = {dirpath(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
 %Loading the mask file
 cd('E:\LRCBH\MNI_segmented');
@@ -97,7 +97,7 @@ end
 fprintf('Dual regression done.\n')
 
 
-% Generating the FCN matrix - not needed now 
+% Generating the FCN matrix - not needed now
 dirpath = dir(dr_savedir);
 subdir = [dirpath(:).isdir];
 subpath = {dirpath(subdir).name}';
@@ -116,26 +116,28 @@ end
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
 % pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
+grp = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
 % sf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
-age = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
-ed = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 5 89 5]);
-suvr = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
-grp = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
+age = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
+ed = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
+suvr = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 8  89 8]);
+
 regressor = horzcat(fluency_ratio, grp);
-covariates = horzcat(age, ed, suvr);
+covariates = horzcat(age, ed);
 interaction = fluency_ratio.*grp;
- 
-% Fitting the multiple linear regression model
-% With the interaction term
-[regress_withinter.X, regress_withinter.Y, regress_withinter.fit_model, regress_withinter.betas, regress_withinter.pvalue, ...
-    regress_withinter.tstatistic, regress_withinter.alpha_level, regress_withinter.pval_interactionvar, ...
-    regress_withinter.meanRsquared_original, regress_withinter.meanRsquared_adjusted, regress_withinter.sig_voxel] = ...
-    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,interaction, covariates,'dualregression',14,'with_interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
-% Without the interaction term
-[regress_withinter.X, regress_withinter.Y, regress_withinter.fit_model, regress_withinter.betas, regress_withinter.pvalue, ...
-    regress_withinter.tstatistic, regress_withinter.alpha_level, regress_withinter.pval_interactionvar, ...
-    regress_withinter.meanRsquared_original, regress_withinter.meanRsquared_adjusted, regress_withinter.sig_voxel] = ...
-    regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,[], covariates,'dualregression',14,'no_interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
+
+% Fitting regression model for all the components
+rsn_idx = [3,4,5,6,9,10,11,12,13,14,16,17,18,19,20];
+rsn_idx = [3,4,5];
+for i=1:length(rsn_idx)
+    idx = rsn_idx(i);
+    fprintf('Fitting regression model for component %d...\n',i);
+    [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
+    regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models');
+end
+fprintf('Fitting regression model done...\n');
+
+
 
 % Testing the assumptions of the regression model
 % 1. Linear relationship
@@ -159,3 +161,41 @@ x2 = horzcat(Y_mean(1:44,:),Y_mean(45:end,:));
 boxplot(x2);
 x6 = sqrt(X(:,6));
 scatter(x6,Y_mean,'filled');
+
+% Generating scatter plots across groups for significant voxels
+Y_sig = Yfitted(:,sig_voxel(1,:));
+Y_avg = mean(Y_sig,2);
+gscatter(fluency_ratio,Y_avg,grp);
+lsline;
+xlabel('Fluency ratio');
+ylabel('Mean voxel value')
+legend('MCI','Normal');
+% Generating mean spatial maps across groups
+Y_sig_grp = mean(Y_sig);
+loc = sig_voxel(1,:);
+temp = zeros(1,228453);
+temp(1,loc) = Y_sig_grp;
+%Saving them as nifti files
+save_ica_nii(temp,x,y,z,indices,m,'association_grp','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps');
+% Plotting the scatter plot
+Y_sig = regress_withinter.Yfitted(:,sig_voxels(1,:));
+Y_mean = mean(Y_sig,2);
+gscatter(fluency_ratio,Y_mean,grp);
+lsline;
+xlabel('Fluency ratio');
+ylabel('Mean voxel value')
+legend('MCI','Normal');
+pval_interaction = (regress_withinter.pvalue(:,2))';% For the interaction term
+%alpha_level = 0.05/n_compar;
+sig_idx= find(pval_interaction<0.05);
+%Testing the linear relationship of the residuals vs fitted
+scatter(mean(regress_withinter.Yfitted,2),mean(regress_withinter.residuals,2));
+lsline;
+%Q-Q plot of the residuals
+qqplot(mean(regress_withinter.residuals,2));
+msqe = mse(regress_withinter.Yfitted,Y);
+scatter(mean(regress_withinter.Yfitted,2))
+
+
+pval = regress_withinter.pval_interactionvar;
+sig_idx= find(pval_interaction<0.001);
