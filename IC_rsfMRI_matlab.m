@@ -128,12 +128,12 @@ interaction = fluency_ratio.*grp;
 
 % Fitting regression model for all the components
 rsn_idx = [3,4,5,6,9,10,11,12,13,14,16,17,18,19,20];
-rsn_idx = [3,4,5];
+rsn_idx = [1,2,7,8,15];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
-    fprintf('Fitting regression model for component %d...\n',i);
+    fprintf('Fitting regression model for component %d(%d)...\n',i,idx);
     [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
-    regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models');
+        regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models');
 end
 fprintf('Fitting regression model done...\n');
 
@@ -196,6 +196,63 @@ qqplot(mean(regress_withinter.residuals,2));
 msqe = mse(regress_withinter.Yfitted,Y);
 scatter(mean(regress_withinter.Yfitted,2))
 
+% Finding the significant voxels based on alpha level and the Rsquared and
+% Fsquared statistic of those components
+loc = 'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models';
+dirloc = dir(loc);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+pval_voxel=  0.001;
+saveloc = 'E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps';
+for j = 1:length(subloc)
+    suboi = subloc{j};
+    current = strcat(loc,'\',suboi);
+    regress_result = load(current);
+    % Finding the significant voxels with grp
+    idx_grp = find(regress_result.pval(:,3)<0.001)';
+    vox_grp{j,1} = idx_grp;
+    % Generating t-statistic map - group significance
+    [~,~,~,stats] = ttest2(regress_result.Yfitted(1:44,idx_grp),regress_result.Yfitted(45:end,idx_grp));
+    temp = zeros(1,228453);
+    temp(1,idx_grp) = stats.tstat;
+    save_ica_nii(temp,x,y,z,indices,m,'tstat_map',strcat(saveloc,'\','Group','\',suboi(21:22)));
+    clear temp stats;
+    % Finding the significant voxels for interaction
+    idx_interaction = find(regress_result.pval(:,4)<0.001)';
+    vox_interaction{j,1} = idx_interaction;
+    % Generating t-statistic map - interaction significance
+    [~,~,~,stats] = ttest2(regress_result.Yfitted(1:44,idx_interaction),regress_result.Yfitted(45:end,idx_interaction));
+    temp = zeros(1,228453);
+    temp(1,idx_interaction) = stats.tstat;
+    save_ica_nii(temp,x,y,z,indices,m,'tstat_map',strcat(saveloc,'\','Interaction','\',suboi(21:22)));
+    clear temp stats;
+    % Finding the significant voxels common across grp & interaction
+    idx_common = intersect(idx_grp,idx_interaction)';
+    vox_common{j,1} = idx_common;
+    % Generating t-statistic map - common significance
+    [~,~,~,stats] = ttest2(regress_result.Yfitted(1:44,idx_common),regress_result.Yfitted(45:end,idx_common));
+    temp = zeros(1,228453);
+    temp(1,idx_common) = stats.tstat;
+    save_ica_nii(temp,x,y,z,indices,m,'tstat_map',strcat(saveloc,'\','Common','\',suboi(21:22)));
+    clear temp stats;
+    % Finding the effect size
+    R_grp = (regress_result.Rsquared_adjust(idx_grp,1))';
+    R_interaction = (regress_result.Rsquared_adjust(idx_interaction,1))';
+    R_common = (regress_result.Rsquared_adjust(idx_common,1))';
+    R_grp_mean = mean(R_grp,2);
+    R_interaction_mean= mean(R_interaction,2);
+    R_common_mean= mean(R_common,2);
+    f_grp(j,1)= R_grp_mean/(1-R_grp_mean);
+    f_interaction(j,1) = R_interaction_mean/(1-R_interaction_mean);
+    f_common(j,1) = R_common_mean/(1-R_common_mean);
+end
+save(fullfile('E:\LRCBH\Results\Matlab\v2\5.Association', sprintf('mlr_model_results_all.mat')),'subloc','vox_common','vox_grp','vox_interaction','f_grp','f_interaction','f_common');
+for i = 1:size(vox_grp,1)
+    vox_grp_n(i,1) = numel(vox_grp{i,1});
+    vox_interaction_n(i,1) = numel(vox_interaction{i,1});
+    vox_common_n(i,1) = numel(vox_common{i,1});
+end
 
-pval = regress_withinter.pval_interactionvar;
-sig_idx= find(pval_interaction<0.001);
+
+
+

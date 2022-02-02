@@ -297,3 +297,36 @@ Y = sub_smoi;
     regress_withinter.tstatistic, regress_withinter.alpha_level, regress_withinter.pval_interactionvar, ...
     regress_withinter.meanRsquared_original, regress_withinter.meanRsquared_adjusted, regress_withinter.sig_voxel] = ...
     regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased',regressor,[], covariates,'dualregression',14,'no_interaction','E:\LRCBH\Results\Matlab\v2\5.Association');
+
+
+dr_dir='E:\LRCBH\Results\Matlab\3.DR\Unbiased';
+var_name = 'dualregression';
+rsn_no = 4;
+dirloc = dir(dr_dir);
+subdir = [dirloc(:).isdir];
+subloc = {dirloc(subdir).name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for i =1:length(subloc)
+    suboi = subloc{i};
+    current = strcat(dr_dir,'\', suboi);
+    cd(current);
+    sub_sm = load(var_name);
+    sub_sm = (sub_sm.ss_sm)';
+    sub_smoi(i,:) = sub_sm(rsn_no,:);
+end
+
+tstat_inter = tstat(:,4)';
+tstat_sig = tstat_inter(:,sig_voxel(1,:));
+sig_voxel(3,:) = tstat_sig;
+
+% Generating the mean t-statistic maps for the significant voxels
+j=1;
+idx_grp = vox_grp{14,1}';
+Y_sig_grp1 = mean(regress_result.Yfitted(1:44,idx_grp));
+Y_sig_grp2 = mean(regress_result.Yfitted(45:end,idx_grp));
+
+[~,~,~,stats] = ttest2(regress_result.Y(1:44,idx_grp),regress_result.Y(45:end,idx_grp));
+temp = zeros(1,228453);
+temp(1,idx_grp) = stats.tstat;
+temp(1,idx_grp) = Y_sig_grp1;
+save_ica_nii(temp,x,y,z,indices,m,'tstat_map','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps');
