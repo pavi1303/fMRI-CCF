@@ -330,3 +330,4 @@ temp = zeros(1,228453);
 temp(1,idx_grp) = stats.tstat;
 temp(1,idx_grp) = Y_sig_grp1;
 save_ica_nii(temp,x,y,z,indices,m,'tstat_map','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps');
+

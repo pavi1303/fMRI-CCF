@@ -114,30 +114,30 @@ end
 
 
 % Generating the design matrix
-fluency_ratio = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
-% pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
-grp = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 4 89 4]);
-% sf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
-age = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 6 89 6]);
-ed = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 7 89 7]);
-suvr = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 8  89 8]);
+fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 103 3]);
+grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 103 4]);
+age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6 103 6]);
+ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 103 7]);
+suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
+pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 103 9]);
+sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 103 10]);
+suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 103 11]);
 
 regressor = horzcat(fluency_ratio, grp);
-covariates = horzcat(age, ed);
+covariates = horzcat(age, ed, suvr_dis);
 interaction = fluency_ratio.*grp;
 
 % Fitting regression model for all the components
-rsn_idx = [3,4,5,6,9,10,11,12,13,14,16,17,18,19,20];
-rsn_idx = [1,2,7,8,15];
+rsn_idx = [1:15];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
-    fprintf('Fitting regression model for component %d(%d)...\n',i,idx);
+    fprintf('Fitting regression model for component %d...\n',idx);
     [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
-        regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models');
+        regressor, [], covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\6.Association_v2\Regression_models');
 end
 fprintf('Fitting regression model done...\n');
 
-
+x = 1-normcdf(5);
 
 % Testing the assumptions of the regression model
 % 1. Linear relationship
@@ -253,6 +253,105 @@ for i = 1:size(vox_grp,1)
     vox_common_n(i,1) = numel(vox_common{i,1});
 end
 
+% Generating scatter plots for the ICA components
+loc = 'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models';
+dirloc = dir(loc);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+subloi = subloc{3,1};
+cd('E:\LRCBH\Results\Matlab\v2\5.Association\Scatter_plots\Common');
+for j = 1:size(subloc,1)
+    suboi = subloc{j};
+    current = strcat(loc,'\',suboi);
+    regress_result = load(current);
+    Y_sig = regress_result.Yfitted(:,vox_common{j,1});
+    Y_mean = mean(Y_sig,2);
+    figure;
+    gscatter(fluency_ratio,Y_mean,grp);
+    lsline;
+    xlabel('Fluency ratio');
+    ylabel('Mean voxel value')
+    legend('Normal','MCI');
+    title(sprintf('Component %s',suboi(21:22)));
+    %saveas(h,sprintf('Component %s'),suboi(21:22));
+    clear Y_sig Y_mean suboi;
+end
+% Generate ICA maps based on t-statistics of the interaction term
+loc = 'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models';
+dirloc = dir(loc);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for k = 1:length(subloc)
+    suboi = subloc{k};
+    current = strcat(loc,'\',suboi);
+    regress_result = load(current);
+    Tstat(k,:) = regress_result.tstat(:,2)';
+end
+save_ica_nii(Tstat,x,y,z,indices,m,'tstat_map_interaction_','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps\No_thresholding');
 
 
 
+% Differences in the distribution of the fluency score
+fluency_ratio = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 3 89 3]);
+% pf = readmatrix('Cobre_language_study.xlsx','Sheet','regression','Range',[2 8 89 8]);
+pf = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 9 89 9]);
+sf = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 10 89 10]);
+[h,p,ci,stats] = ttest2(fluency_ratio(1:44,1),fluency_ratio(45:end,1));
+[h1,p1,ci1,stats1] = ttest2(pf(1:44,1),pf(45:end,1));
+[h2,p2,ci2,stats2] = ttest2(sf(1:44,1),sf(45:end,1));
+
+
+%ks density plots
+% Phonemic Fluency
+[f,xi] = ksdensity(pf); 
+figure
+plot(xi,f);
+title('Phonemic fluency');
+clear f xi;
+% Semantic Fluency
+[f,xi] = ksdensity(sf); 
+figure
+plot(xi,f);
+title('Semantic fluency');
+clear f xi;
+% Fluency ratio
+[f,xi] = ksdensity(fluency_ratio); 
+figure
+plot(xi,f);
+title('Fluency ratio');
+clear f xi;
+% Group
+[f,xi] = ksdensity(grp); 
+figure
+plot(xi,f);
+title('Group');
+clear f xi;
+% Age
+[f,xi] = ksdensity(age); 
+figure
+plot(xi,f);
+title('Age');
+clear f xi;
+% Education
+[f,xi] = ksdensity(ed); 
+figure
+plot(xi,f);
+title('Education');
+clear f xi;
+% SUVR - continuous
+[f,xi] = ksdensity(suvr); 
+figure
+plot(xi,f);
+title('SUVR - continuous');
+clear f xi;
+% SUVR - discrete
+[f,xi] = ksdensity(suvr_dis); 
+figure
+plot(xi,f);
+title('SUVR - discrete');
+clear f xi;
+
+% Checking the correlation coefficient and VIF 
+mat = horzcat(fluency_ratio, grp, age, ed, suvr_dis);
+R= corrcoef(mat);
+V=diag(inv(R))';
