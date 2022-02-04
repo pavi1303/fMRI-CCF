@@ -128,12 +128,12 @@ covariates = horzcat(age, ed, suvr_dis);
 interaction = fluency_ratio.*grp;
 
 % Fitting regression model for all the components
-rsn_idx = [1:15];
+rsn_idx = [1:20];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
     fprintf('Fitting regression model for component %d...\n',idx);
     [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
-        regressor, [], covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\6.Association_v2\Regression_models');
+        regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\7.Association_with_interaction\Regression_models');
 end
 fprintf('Fitting regression model done...\n');
 

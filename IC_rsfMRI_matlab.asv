@@ -124,21 +124,16 @@ sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10
 suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 103 11]);
 
 regressor = horzcat(fluency_ratio, grp);
-covariates = horzcat(age, ed, suvr);
+covariates = horzcat(age, ed, suvr_dis);
 interaction = fluency_ratio.*grp;
 
-mat = horzcat(regressor, covariates);
-R = corrcoef(mat);
-% correlation matrix
-V=diag(inv(R))';
 % Fitting regression model for all the components
-rsn_idx = [3,4,5,6,9,10,11,12,13,14,16,17,18,19,20];
-rsn_idx = [1,2,7,8,15];
+rsn_idx = [16:20];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
-    fprintf('Fitting regression model for component %d(%d)...\n',i,idx);
+    fprintf('Fitting regression model for component %d...\n',idx);
     [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
-        regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models');
+        regressor, [], covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\6.Association_v2\Regression_models');
 end
 fprintf('Fitting regression model done...\n');
 
@@ -358,4 +353,5 @@ clear f xi;
 
 % Checking the correlation coefficient and VIF 
 mat = horzcat(fluency_ratio, grp, age, ed, suvr_dis);
-
+R= corrcoef(mat);
+V=diag(inv(R))';
