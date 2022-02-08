@@ -123,21 +123,22 @@ pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 
 sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 103 10]);
 suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 103 11]);
 
+%regressor = horzcat(fluency_ratio, grp);
 regressor = horzcat(fluency_ratio, grp);
 covariates = horzcat(age, ed, suvr_dis);
 interaction = fluency_ratio.*grp;
 
 % Fitting regression model for all the components
-rsn_idx = [16:20];
+rsn_idx = [1:20];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
     fprintf('Fitting regression model for component %d...\n',idx);
     [~,~,~,~,~,~,~,~,~,~,~,~,~,~] = regress_model('E:\LRCBH\Results\Matlab\3.DR\Unbiased', ...
-        regressor, [], covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\6.Association_v2\Regression_models');
+        regressor, interaction, covariates,0.05,'dualregression',idx,'E:\LRCBH\Results\Matlab\v2\7.Association_with_interaction\Regression_models');
 end
 fprintf('Fitting regression model done...\n');
 
-x = 1-normcdf(5);
+%x = 1-normcdf(5);
 
 % Testing the assumptions of the regression model
 % 1. Linear relationship
@@ -277,7 +278,7 @@ for j = 1:size(subloc,1)
     clear Y_sig Y_mean suboi;
 end
 % Generate ICA maps based on t-statistics of the interaction term
-loc = 'E:\LRCBH\Results\Matlab\v2\5.Association\Regression_models';
+loc = 'E:\LRCBH\Results\Matlab\v2\6.Association_v2\Regression_models';
 dirloc = dir(loc);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
@@ -285,9 +286,9 @@ for k = 1:length(subloc)
     suboi = subloc{k};
     current = strcat(loc,'\',suboi);
     regress_result = load(current);
-    Tstat(k,:) = regress_result.tstat(:,2)';
+    Tstat(k,:) = regress_result.tstat(:,1)';
 end
-save_ica_nii(Tstat,x,y,z,indices,m,'tstat_map_interaction_','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps\No_thresholding');
+save_ica_nii(Tstat,x,y,z,indices,m,'tmap_interaction_','E:\LRCBH\Results\Matlab\v2\6.Association_v2\Spatial maps');
 
 
 
