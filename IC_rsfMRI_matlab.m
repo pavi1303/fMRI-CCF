@@ -3,11 +3,11 @@ clc
 clear
 tic
 % Getting the list of all the directories
-rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data';
-pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA';
-ica_savedir = 'E:\LRCBH\Results\Matlab\2.ICA';
-dr_savedir = 'E:\LRCBH\Results\Matlab\3.DR';
-fcn_savedir='E:\LRCBH\Results\Matlab\4.FCN';
+rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
+pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Useful';
+ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\4.ICA_v2';
+dr_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\5.DR_v2';
+fcn_savedir='E:\LRCBH\Results\Matlab\ICA_50_results\6.FCN_v2';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
@@ -46,7 +46,7 @@ fprintf('PCA reduction done.\n');
 fprintf('Performing temporal concatenation of subjects...\n');
 tcat_data = temporal_concat(subloc,pca_savedir);
 fprintf('Temporal concatenation done.\n')
-clearvars -except tcat_data
+clearvars -except tcat_data ica_savedir
 % Performing spatial ICA based on hyperbolic tangent
 method=11;
 a1=1;
@@ -56,22 +56,24 @@ A0=[];
 shift=[];
 Sigma=0;
 determine_flip=1;
-npca=30;
+npca=50;
 
 [S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=...
     ica_DC_improved(tcat_data,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip);
-save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','White','-v7.3');
+save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','E','eigval','White','-v7.3');
 toc
 
 %Saving the individual ica components as nii files
-ica_dat = load('gICA_30_result.mat','S');
+cd(ica_savedir);
+ica_dat = load('gICA_50_result.mat','S');
 S = ica_dat.S;
-save_ica_nii(S,x,y,z,indices,m,ica_savedir)
+S = double(S);
+save_ica_nii(S,x,y,z,indices,m,'gICA',ica_savedir);
 
 % Doing dual regression
-noise_idx = [2,4,11,13,14,17,18,19,28,23];
+%noise_idx = [2,4,11,13,14,17,18,19,28,23];
 %Using only the useful components
-S(noise_idx,:)=[];
+%S(noise_idx,:)=[];
 %Getting the directory having the subject wise voxel time data
 dirloc = dir(pca_savedir);
 subloc = {dirloc.name}';
@@ -92,7 +94,7 @@ for i =1:length(subloc)
     end
     save(fullfile(ss_dr_dir,sprintf('dualregression.mat')),'ss_tc',"ss_sm");
     % Saving the independent components as nii images
-    save_ica_nii(ss_sm',x,y,z,indices,m,ss_dr_dir);
+    save_ica_nii(ss_sm',x,y,z,indices,m,'ica_',ss_dr_dir);
 end
 fprintf('Dual regression done.\n')
 
@@ -112,6 +114,32 @@ for i=1:length(subpath)
     save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
 end
 
+% Generating the overall and mean functional connectivity across the two groups
+% OVERALL FUNCTIONAL CONNECTIVITY MATRIX
+dirloc = dir(fcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+conn_thresh_pos = 0.5;
+conn_thresh_neg = -0.5;
+for i  = 1:length(subloc)
+    sub = subloc{i};
+    current = strcat(fcn_savedir,'\',sub);
+    sub_data = load(current,'fcn');
+    fcn_mat{1,i} = (sub_data.fcn);
+end
+X = cat(3,fcn_mat{:});
+fcn_overall = mean(X,3);
+L_mat = tril(fcn_overall,-1);
+[row, col, ~] = find(L_mat>conn_thresh_pos | L_mat<conn_thresh_neg);
+idx = horzcat(row, col);
+val = zeros(50,50);
+for i = 1:size(idx,1)
+    val(idx(i,1),idx(i,2)) = L_mat(idx(i,1),idx(i,2));
+end
+fcn
+% GROUP-SPECIFIC FUNCTIONAL CONNECTIVITY MATRIX
+grp1_idx = [];
+grp2_idx = [];
 
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 103 3]);
@@ -129,7 +157,7 @@ covariates = horzcat(age, ed, suvr_dis);
 interaction = fluency_ratio.*grp;
 
 % Fitting regression model for all the components
-rsn_idx = [2:5];
+rsn_idx = [17:20];
 for i=1:length(rsn_idx)
     idx = rsn_idx(i);
     fprintf('Fitting regression model for component %d...\n',idx);
@@ -304,55 +332,56 @@ sf = readmatrix('Cobre_fluency_study.xlsx','Sheet','regression','Range',[2 10 89
 
 %ks density plots
 % Phonemic Fluency
-[f,xi] = ksdensity(pf); 
+[f,xi] = ksdensity(pf);
 figure
 plot(xi,f);
 title('Phonemic fluency');
 clear f xi;
 % Semantic Fluency
-[f,xi] = ksdensity(sf); 
+[f,xi] = ksdensity(sf);
 figure
 plot(xi,f);
 title('Semantic fluency');
 clear f xi;
 % Fluency ratio
-[f,xi] = ksdensity(fluency_ratio); 
+[f,xi] = ksdensity(fluency_ratio);
 figure
 plot(xi,f);
 title('Fluency ratio');
 clear f xi;
 % Group
-[f,xi] = ksdensity(grp); 
+[f,xi] = ksdensity(grp);
 figure
 plot(xi,f);
 title('Group');
 clear f xi;
 % Age
-[f,xi] = ksdensity(age); 
+[f,xi] = ksdensity(age);
 figure
 plot(xi,f);
 title('Age');
 clear f xi;
 % Education
-[f,xi] = ksdensity(ed); 
+[f,xi] = ksdensity(ed);
 figure
 plot(xi,f);
 title('Education');
 clear f xi;
 % SUVR - continuous
-[f,xi] = ksdensity(suvr); 
+[f,xi] = ksdensity(suvr);
 figure
 plot(xi,f);
 title('SUVR - continuous');
 clear f xi;
 % SUVR - discrete
-[f,xi] = ksdensity(suvr_dis); 
+[f,xi] = ksdensity(suvr_dis);
 figure
 plot(xi,f);
 title('SUVR - discrete');
 clear f xi;
 
-% Checking the correlation coefficient and VIF 
-mat = horzcat(fluency_ratio, grp, age, ed, suvr_dis);
+% Checking the correlation coefficient and VIF
+mat = horzcat(fluency_ratio, interaction, age, ed, suvr_dis);
+mat = horzcat(regressor, covariates);
 R= corrcoef(mat);
 V=diag(inv(R))';

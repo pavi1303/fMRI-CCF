@@ -331,4 +331,16 @@ temp(1,idx_grp) = stats.tstat;
 temp(1,idx_grp) = Y_sig_grp1;
 save_ica_nii(temp,x,y,z,indices,m,'tstat_map','E:\LRCBH\Results\Matlab\v2\5.Association\Spatial_maps');
 
-interaction = [];
+t_stat = tstat(:,2);
+idx = find(t_stat>2.5);
+details = horzcat(t_stat(idx,1),pval(idx,4));
+details_mean = mean(details);
+
+
+
+%----Finding the mean of the FCN matrix
+path = 'E:\LRCBH\Results\Matlab\ICA_100_results\3.FCN';
+dirloc = dir(path);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for i = 1:length
