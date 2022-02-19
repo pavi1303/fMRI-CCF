@@ -1,21 +1,36 @@
-function [fcn_mean, ] = fcnmat_results(fcn_dir, pos_thresh, neg_thresh, n_ica)
+function [fluency_ratio, subloc, fcn_mat, rsn_idx, corr_value] = fcnmat_results(fcn_dir, fluency_loc, pat_idx, noise_idx,grp_id)
+% Loading the fluency ratio 
+cd(fluency_loc);
+if grp_id ==1
+    fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 12 52 12]);
+else if grp_id==2
+    fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 12 52 12]);
+else
+    fprintf('There are only 2 groups. Group index is out of bounds');
+end
+% Getting the list of patients in the corresponding group
 dirloc = dir(fcn_dir);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
+subloc = subloc(pat_idx,:);
+% Generating the patient * fcn value matrix 
 for i = 1:length(subloc)
     sub = subloc{i};
     current = strcat(fcn_savedir,'\',sub);
-    sub_data = load(current,'fcn');
-    fcn_mat{1,i} = (sub_data.fcn);
+    sub_fcn = load(current,'fcn');
+    sub_fcn = sub_fcn.fcn;
+    sub_fcn(:,noise_idx) = 0;
+    sub_fcn(noise_idx,:) = 0;
+    L_mat = tril(sub_fcn,-1);
+    fcn_mat(i,:) = L_mat(L_mat~=0);
 end
-X = cat(3,fcn_mat{:});
-fcn_mean = mean(X,3);
-L_mat = tril(fcn_mean,-1);
-[row, col, ~] = find(L_mat>pos_thresh | L_mat<neg_thresh);
-idx = horzcat(row, col);
-val = zeros(n_ica,n_ica);
-for i = 1:size(idx,1)
-    val(idx(i,1),idx(i,2)) = L_mat(idx(i,1),idx(i,2));
+% Getting the indices of the resting state networks
+[row,col] = find(L_mat);
+rsn_idx = horzcat(row,col);
+% Getting the correlation values
+for j = 1:size(fcn_mat,2)
+    fcn_oi = fcn_mat(:,j);
+    r = corrcoef(fcn_oi,fluency_ratio);
+    corr_value(1,j) = r(1,2);
 end
-
 end

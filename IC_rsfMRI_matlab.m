@@ -5,9 +5,9 @@ tic
 % Getting the list of all the directories
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Useful';
-ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\4.ICA_v2';
+ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_100_results\1.ICA';
 dr_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\5.DR_v2';
-fcn_savedir='E:\LRCBH\Results\Matlab\ICA_50_results\6.FCN_v2';
+fcn_savedir='E:\LRCBH\Results\Matlab\ICA_100_results\3.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
@@ -65,7 +65,7 @@ toc
 
 %Saving the individual ica components as nii files
 cd(ica_savedir);
-ica_dat = load('gICA_50_result.mat','S');
+ica_dat = load('gICA_100_result.mat','S');
 S = ica_dat.S;
 S = double(S);
 save_ica_nii(S,x,y,z,indices,m,'gICA',ica_savedir);
@@ -110,37 +110,33 @@ for i=1:length(subpath)
     cd(current);
     dr = load('dualregression.mat','ss_tc');
     tc = (dr.ss_tc)';
-    fcn = corrcoef(tc);
-    save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn');
+    [pval, fcn] = corrcoef(tc);
+    save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn','pval');
 end
 
 % Generating the overall and mean functional connectivity across the two groups
 % OVERALL FUNCTIONAL CONNECTIVITY MATRIX
-dirloc = dir(fcn_savedir);
-subloc = {dirloc.name}';
-subloc(ismember(subloc,{'.','..'})) = [];
-conn_thresh_pos = 0.5;
-conn_thresh_neg = -0.5;
-for i  = 1:length(subloc)
-    sub = subloc{i};
-    current = strcat(fcn_savedir,'\',sub);
-    sub_data = load(current,'fcn');
-    fcn_mat{1,i} = (sub_data.fcn);
-end
-X = cat(3,fcn_mat{:});
-fcn_overall = mean(X,3);
-L_mat = tril(fcn_overall,-1);
-[row, col, ~] = find(L_mat>conn_thresh_pos | L_mat<conn_thresh_neg);
-idx = horzcat(row, col);
-val = zeros(50,50);
-for i = 1:size(idx,1)
-    val(idx(i,1),idx(i,2)) = L_mat(idx(i,1),idx(i,2));
-end
-fcn
-% GROUP-SPECIFIC FUNCTIONAL CONNECTIVITY MATRIX
-grp1_idx = [];
-grp2_idx = [];
+%Based on function
+%noise_idx = [7,10,11,12,23,24,26,33,37,34,39,40,42,45]; % ICA 50
+noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
+all_idx = [1:102]';
+grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
+    59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
+grp2_idx = setdiff(all_idx,grp1_idx)';
+[all.subs,all.sub_cat,all.fcn_mean, all.L_mat1, all.thresh_idx, all.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, all_idx, noise_idx);
+[grp1.subs,grp1.sub_cat,grp1.fcn_mean, grp1.L_mat1, grp1.thresh_idx, grp1.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp1_idx, noise_idx);
+[grp2.subs,grp2.sub_cat,grp2.fcn_mean, grp2.L_mat1, grp2.thresh_idx, grp2.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp2_idx, noise_idx);
+save(fullfile('E:\LRCBH\Results\Matlab\ICA_100_results',sprintf('FCN_%d_results.mat',100)),'all','grp1','grp2','grp1_idx','grp2_idx');
 
+% Correlational analysis with the fluency score
+noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
+all_idx = [1:102]';
+grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
+    59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
+grp2_idx = setdiff(all_idx,grp1_idx)';
+fluency_dir = 'E:\LRCBH\Projects\COBRE\Results\Documents\Excel';
+[grp1.fluency_ratio, grp1.subinfo, grp1.fcn_matrix, grp1.rsn_loc, grp1.correlation_coefficient] = fcnmat_results(fcn_savedir, fluency_dir, grp1_idx,noise_idx,1);
+[grp2.fluency_ratio, grp2.subinfo, grp2.fcn_matrix, grp2.rsn_loc, grp2.correlation_coefficient] = fcnmat_results(fcn_savedir, fluency_dir, grp2_idx,noise_idx,2);
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 103 3]);
 grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 103 4]);
@@ -385,3 +381,6 @@ mat = horzcat(fluency_ratio, interaction, age, ed, suvr_dis);
 mat = horzcat(regressor, covariates);
 R= corrcoef(mat);
 V=diag(inv(R))';
+
+% Calculating the p-value
+[h,p] = ttest(S(83,:),S(50,:));

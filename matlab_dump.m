@@ -343,4 +343,39 @@ path = 'E:\LRCBH\Results\Matlab\ICA_100_results\3.FCN';
 dirloc = dir(path);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
-for i = 1:length
+
+
+
+ %%% Generating the overall and mean functional connectivity across the two groups
+% OVERALL FUNCTIONAL CONNECTIVITY MATRIX
+ dirloc = dir(fcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+conn_thresh_pos = 0.5;
+conn_thresh_neg = -0.5;
+for i  = 1:length(subloc)
+    sub = subloc{i};
+    current = strcat(fcn_savedir,'\',sub);
+    sub_data = load(current,'fcn');
+    fcn_mat{1,i} = (sub_data.fcn);
+end
+X = cat(3,fcn_mat{:});
+fcn_overall = mean(X,3);
+L_mat = tril(fcn_overall,-1);
+[row, col, ~] = find(L_mat>conn_thresh_pos | L_mat<conn_thresh_neg);
+idx = horzcat(row, col);
+val1 = zeros(50,50);
+for i = 1:size(idx,1)
+    val1(idx(i,1),idx(i,2)) = L_mat(idx(i,1),idx(i,2));
+end
+clearvars -except fcn_savedir, val1, idx, L_mat;
+fcn(noise_idx,:) = 0;
+fcn(:,noise_idx) = 0;
+uncommon = setdiff(grp1.thresh_idx, grp2.thresh_idx);
+
+
+
+f = rand(1,100)';
+ratio = 1.677;
+ratio_N = repmat(ratio, 100);
+r = corrcoef(f, ratio);
