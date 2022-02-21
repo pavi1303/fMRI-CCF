@@ -379,3 +379,25 @@ f = rand(1,100)';
 ratio = 1.677;
 ratio_N = repmat(ratio, 100);
 r = corrcoef(f, ratio);
+
+
+
+y1 = 2 * randn(1,500);
+y2 = 3 * randn(1,500) + 5;
+y3 = 5 * randn(1,500) + 5;
+y = [y1 y2 y3];
+x = [ones(1,500) 2*ones(1,500) 3*ones(1,500)];
+%------------------------------------------------------------------------------%
+%                          CORRELATION WITH FLUENCY SCORE
+%------------------------------------------------------------------------------%
+%Based on function
+%noise_idx = [7,10,11,12,23,24,26,33,37,34,39,40,42,45]; % ICA 50
+noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
+all_idx = [1:102]';
+grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
+    59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
+grp2_idx = setdiff(all_idx,grp1_idx)';
+[all.subs,all.sub_cat,all.fcn_mean, all.L_mat1, all.thresh_idx, all.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, all_idx, noise_idx);
+[grp1.subs,grp1.sub_cat,grp1.fcn_mean, grp1.L_mat1, grp1.thresh_idx, grp1.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp1_idx, noise_idx);
+[grp2.subs,grp2.sub_cat,grp2.fcn_mean, grp2.L_mat1, grp2.thresh_idx, grp2.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp2_idx, noise_idx);
+save(fullfile('E:\LRCBH\Results\Matlab\ICA_100_results',sprintf('FCN_%d_results.mat',100)),'all','grp1','grp2','grp1_idx','grp2_idx');

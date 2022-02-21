@@ -2,18 +2,26 @@
 clc
 clear
 tic
-% Getting the list of all the directories
+
+%------------------------------------------------------------------------------%
+%                     IMPORTING LIST OF USEFUL DIRECTORIES
+%------------------------------------------------------------------------------%
+
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Useful';
 ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_100_results\1.ICA';
 dr_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\5.DR_v2';
-fcn_savedir='E:\LRCBH\Results\Matlab\ICA_100_results\3.FCN';
+fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\3.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
-%Loading the mask file
+
+%------------------------------------------------------------------------------%
+%                     ACQUIRING CRUCIAL VOXEL INFORMATION
+%------------------------------------------------------------------------------%
+
 cd('E:\LRCBH\MNI_segmented');
 %cd('W:\MNI_segmented')
 m = load_untouch_nii('standard_binary.nii');
@@ -24,6 +32,11 @@ mask_temp = reshape(M, [1,x*y*z]);
 [~, indices] = find(mask_temp);
 trs = 850;
 comp = 200;
+
+%------------------------------------------------------------------------------%
+%                                 PCA REDUCTION
+%------------------------------------------------------------------------------%
+
 %Iterating through each of the subjects
 for i=1:length(subloc)
     suboi = subloc{i};
@@ -36,18 +49,25 @@ for i=1:length(subloc)
     vt_data = double(zscore(temp(16:end, :)));
     clear temp;
     fprintf('Performing PCA reduction using %d components for subject %s...\n',comp,suboi);
-    %Performing subject wise PCA reduction
     PCA_red = double(do_PCA(vt_data,comp));
     cd(pca_savedir);
     save(fullfile(pca_savedir, sprintf('PCA_%s.mat',suboi)),'PCA_red','vt_data','index');
 end
 fprintf('PCA reduction done.\n');
-% Doing temporal concatenation of the subjects
+
+%------------------------------------------------------------------------------%
+%                               TEMPORAL CONCATENATION
+%------------------------------------------------------------------------------%
+
 fprintf('Performing temporal concatenation of subjects...\n');
 tcat_data = temporal_concat(subloc,pca_savedir);
 fprintf('Temporal concatenation done.\n')
 clearvars -except tcat_data ica_savedir
-% Performing spatial ICA based on hyperbolic tangent
+
+%------------------------------------------------------------------------------%
+%                               SPATIAL ICA BASED ON HTANH
+%------------------------------------------------------------------------------%
+
 method=11;
 a1=1;
 var_normal=1;
@@ -63,14 +83,20 @@ npca=50;
 save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','E','eigval','White','-v7.3');
 toc
 
-%Saving the individual ica components as nii files
+%------------------------------------------------------------------------------%
+%                  GENERATING NII VERSION OF ICA COMPONENTS
+%------------------------------------------------------------------------------%
+
 cd(ica_savedir);
 ica_dat = load('gICA_100_result.mat','S');
 S = ica_dat.S;
 S = double(S);
 save_ica_nii(S,x,y,z,indices,m,'gICA',ica_savedir);
 
-% Doing dual regression
+%------------------------------------------------------------------------------%
+%                                      DUAL REGRESSION
+%------------------------------------------------------------------------------%
+
 %noise_idx = [2,4,11,13,14,17,18,19,28,23];
 %Using only the useful components
 %S(noise_idx,:)=[];
@@ -98,8 +124,10 @@ for i =1:length(subloc)
 end
 fprintf('Dual regression done.\n')
 
+%------------------------------------------------------------------------------%
+%                          FUNCTIONAL CONNECTIVITY ANALYSIS
+%------------------------------------------------------------------------------%
 
-% Generating the FCN matrix - not needed now
 dirpath = dir(dr_savedir);
 subdir = [dirpath(:).isdir];
 subpath = {dirpath(subdir).name}';
@@ -114,29 +142,78 @@ for i=1:length(subpath)
     save(fullfile(fcn_savedir, sprintf('FCN_%s.mat',sub)),'fcn','pval');
 end
 
-% Generating the overall and mean functional connectivity across the two groups
-% OVERALL FUNCTIONAL CONNECTIVITY MATRIX
-%Based on function
-%noise_idx = [7,10,11,12,23,24,26,33,37,34,39,40,42,45]; % ICA 50
-noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
-all_idx = [1:102]';
-grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
-    59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
-grp2_idx = setdiff(all_idx,grp1_idx)';
-[all.subs,all.sub_cat,all.fcn_mean, all.L_mat1, all.thresh_idx, all.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, all_idx, noise_idx);
-[grp1.subs,grp1.sub_cat,grp1.fcn_mean, grp1.L_mat1, grp1.thresh_idx, grp1.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp1_idx, noise_idx);
-[grp2.subs,grp2.sub_cat,grp2.fcn_mean, grp2.L_mat1, grp2.thresh_idx, grp2.thresh_mat] = fcnmat_results(fcn_savedir, 0.5, -0.5, 50, grp2_idx, noise_idx);
-save(fullfile('E:\LRCBH\Results\Matlab\ICA_100_results',sprintf('FCN_%d_results.mat',100)),'all','grp1','grp2','grp1_idx','grp2_idx');
+%------------------------------------------------------------------------------%
+%                          CORRELATION WITH FLUENCY SCORE
+%------------------------------------------------------------------------------%
 
-% Correlational analysis with the fluency score
+fluency_dir = 'E:\LRCBH\Projects\COBRE\Results\Documents\Excel';
+% Specifying the corresponding patient indices
 noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
 all_idx = [1:102]';
 grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
     59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
 grp2_idx = setdiff(all_idx,grp1_idx)';
-fluency_dir = 'E:\LRCBH\Projects\COBRE\Results\Documents\Excel';
-[grp1.fluency_ratio, grp1.subinfo, grp1.fcn_matrix, grp1.rsn_loc, grp1.correlation_coefficient] = fcnmat_results(fcn_savedir, fluency_dir, grp1_idx,noise_idx,1);
-[grp2.fluency_ratio, grp2.subinfo, grp2.fcn_matrix, grp2.rsn_loc, grp2.correlation_coefficient] = fcnmat_results(fcn_savedir, fluency_dir, grp2_idx,noise_idx,2);
+% Declaring other relevant information
+edges = -0.6 : 0.2 : 0.6;
+pos_range = [0.4, 0.6];
+neg_range = [-0.6, -0.4];
+% Getting the results
+[grp1.fluency_ratio, grp1.subinfo, grp1.fcn_matrix, grp1.rsn_loc, grp1.correlation_coefficient, ...
+    grp1.min_correlation, grp1.max_correlation, grp1.number, grp1.poscorrelation_value, grp1.negcorrelation_value, grp1.pos_rsn, grp1.neg_rsn] = ...
+    fcnmat_results(fcn_savedir, fluency_dir, grp1_idx,noise_idx,1, edges, pos_range, neg_range);
+[grp2.fluency_ratio, grp2.subinfo, grp2.fcn_matrix, grp2.rsn_loc, grp2.correlation_coefficient, ...
+    grp2.min_correlation, grp2.max_correlation, grp2.number, grp2.poscorrelation_value, grp2.negcorrelation_value, grp2.pos_rsn, grp2.neg_rsn] = ...
+    fcnmat_results(fcn_savedir, fluency_dir, grp2_idx,noise_idx,2, edges, pos_range, neg_range);
+save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('Correlation_fluency_results_%d.mat',100)),'grp1','grp2');
+
+%------------------------------------------------------------------------------%
+%   BAR PLOT SHOWING THE DISTRIBUTION OF CORRELATION VALUES
+%------------------------------------------------------------------------------%
+
+
+
+%---------------------Boxplot with data scattared-------------------------%
+a1 = (grp1.correlation_coefficient)';
+a2 = (grp2.correlation_coefficient)';
+a = vertcat(a1,a2);
+g1 = [zeros(length(a1),1); ones(length(a2),1)];
+boxplot(a,g1,'Notch','off');
+%set(gca,'YLim',[-3 3])
+set(gca,'XTickLabel', {'Normal cognition','MCI'});
+set(gca,'TickLabelInterpreter','none');
+set(gca,'fontsize',20);
+hold on
+[C,~,ic] = unique(g1,'stable');
+scatter(ic,a,'k','filled','MarkerFaceAlpha',0.5');
+color = ['g','r'];
+h = findobj(gca,'Tag','Box');
+ for j=1:length(h)
+    patch(get(h(j),'XData'),get(h(j),'YData'),color(j),'FaceAlpha',.2);
+ end
+ylabel('Correlation coefficient','fontweight','bold','FontSize',24)
+title('f2','fontweight','bold','FontSize',24)
+legend(h([3,4]),{'Diseased','Healthy'})
+% Generating the barplots with bins denoting eh number of connections having
+% that correlation value
+xloc = [1,2,3,4,5,6];
+% Grp1
+figure;
+bar(xloc, grp1.number);
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
+% Grp2
+figure;
+bar(xloc, grp2.number);
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp II - MCI','fontweight','bold','FontSize',24);
+
+%%%%%%%%------REGRESSION ANALYSIS-----%%%%%%%%%%%
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 103 3]);
 grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 103 4]);

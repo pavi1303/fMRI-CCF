@@ -1,5 +1,4 @@
-function [fluency_ratio, subloc, fcn_mat, rsn_idx, corr_value, corr_min, corr_max,N, poscorr_value,negcorr_value,rsn_pos,rsn_neg] = ...
-    fcnmat_results(fcn_dir, fluency_loc, pat_idx, noise_idx,grp_id, xrange, poscorr_range, negcorr_range)
+function [fluency_ratio, subloc, fcn_mat, rsn_idx, corr_value, corr_min, corr_max,] = fcnmat_results(fcn_dir, fluency_loc, pat_idx, noise_idx,grp_id, xrange, poscorr_range, negcorr_range)
 % Loading the fluency ratio 
 cd(fluency_loc);
 if grp_id ==1
@@ -35,13 +34,12 @@ for j = 1:size(fcn_mat,2)
     corr_value(1,j) = r(1,2);
 end
 % Finding and returning the max and min corr values
-corr_value = (corr_value)';
 corr_min = min(corr_value);
 corr_max = max(corr_value);
 % Finding the connections in a specific range and it's value
 N = histcounts(corr_value, xrange);
-pos_idx = find(poscorr_range(1,1)<=corr_value & corr_value<poscorr_range(1,2));
-neg_idx = find(negcorr_range(1,1)<=corr_value & corr_value<negcorr_range(1,2));
+pos_idx = find(poscorr_range(1,1)<=a1 & a1<poscorr_range(1,2));
+neg_idx = find(negcorr_range(1,1)<=a1 & a1<negcorr_range(1,2));
 poscorr_value = corr_value(pos_idx,1);
 negcorr_value = corr_value(neg_idx,1);
 % Finding the networks with those values
