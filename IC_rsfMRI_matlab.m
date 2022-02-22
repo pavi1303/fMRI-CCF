@@ -170,7 +170,23 @@ save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('
 %   BAR PLOT SHOWING THE DISTRIBUTION OF CORRELATION VALUES
 %------------------------------------------------------------------------------%
 
-
+xloc = [1,2,3,4,5,6];
+% Grp1
+figure;
+bar(xloc, grp1.number, 0.5,'r');
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
+% Grp2
+figure;
+bar(xloc, grp2.number);
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp II - MCI','fontweight','bold','FontSize',24);
 
 %---------------------Boxplot with data scattared-------------------------%
 a1 = (grp1.correlation_coefficient)';
@@ -195,25 +211,12 @@ title('f2','fontweight','bold','FontSize',24)
 legend(h([3,4]),{'Diseased','Healthy'})
 % Generating the barplots with bins denoting eh number of connections having
 % that correlation value
-xloc = [1,2,3,4,5,6];
-% Grp1
-figure;
-bar(xloc, grp1.number);
-ax=gca;
-ax.FontSize=15;
-xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
-% Grp2
-figure;
-bar(xloc, grp2.number);
-ax=gca;
-ax.FontSize=15;
-xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp II - MCI','fontweight','bold','FontSize',24);
 
-%%%%%%%%------REGRESSION ANALYSIS-----%%%%%%%%%%%
+
+%------------------------------------------------------------------------------%
+%                                REGRESSION ANALYSIS
+%------------------------------------------------------------------------------%
+
 % Generating the design matrix
 fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 103 3]);
 grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 103 4]);

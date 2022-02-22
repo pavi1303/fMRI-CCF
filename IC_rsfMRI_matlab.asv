@@ -2,9 +2,11 @@
 clc
 clear
 tic
+
 %------------------------------------------------------------------------------%
 %                     IMPORTING LIST OF USEFUL DIRECTORIES
 %------------------------------------------------------------------------------%
+
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Useful';
 ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_100_results\1.ICA';
@@ -15,7 +17,11 @@ dirpath = dir(rootdir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
-%Loading the mask file
+
+%------------------------------------------------------------------------------%
+%                     ACQUIRING CRUCIAL VOXEL INFORMATION
+%------------------------------------------------------------------------------%
+
 cd('E:\LRCBH\MNI_segmented');
 %cd('W:\MNI_segmented')
 m = load_untouch_nii('standard_binary.nii');
@@ -26,9 +32,11 @@ mask_temp = reshape(M, [1,x*y*z]);
 [~, indices] = find(mask_temp);
 trs = 850;
 comp = 200;
+
 %------------------------------------------------------------------------------%
 %                                 PCA REDUCTION
 %------------------------------------------------------------------------------%
+
 %Iterating through each of the subjects
 for i=1:length(subloc)
     suboi = subloc{i};
@@ -157,10 +165,28 @@ neg_range = [-0.6, -0.4];
     grp2.min_correlation, grp2.max_correlation, grp2.number, grp2.poscorrelation_value, grp2.negcorrelation_value, grp2.pos_rsn, grp2.neg_rsn] = ...
     fcnmat_results(fcn_savedir, fluency_dir, grp2_idx,noise_idx,2, edges, pos_range, neg_range);
 save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('Correlation_fluency_results_%d.mat',100)),'grp1','grp2');
+
 %------------------------------------------------------------------------------%
 %   BAR PLOT SHOWING THE DISTRIBUTION OF CORRELATION VALUES
 %------------------------------------------------------------------------------%
 
+xloc = [1,2,3,4,5,6];
+% Grp1
+figure;
+bar(xloc, grp1.number);
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
+% Grp2
+figure;
+bar(xloc, grp2.number);
+ax=gca;
+ax.FontSize=15;
+xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
+title(' Grp II - MCI','fontweight','bold','FontSize',24);
 
 %---------------------Boxplot with data scattared-------------------------%
 a1 = (grp1.correlation_coefficient)';
@@ -185,23 +211,7 @@ title('f2','fontweight','bold','FontSize',24)
 legend(h([3,4]),{'Diseased','Healthy'})
 % Generating the barplots with bins denoting eh number of connections having
 % that correlation value
-xloc = [1,2,3,4,5,6];
-% Grp1
-figure;
-bar(xloc, grp1.number);
-ax=gca;
-ax.FontSize=15;
-xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
-% Grp2
-figure;
-bar(xloc, grp2.number);
-ax=gca;
-ax.FontSize=15;
-xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp II - MCI','fontweight','bold','FontSize',24);
+
 
 %%%%%%%%------REGRESSION ANALYSIS-----%%%%%%%%%%%
 % Generating the design matrix
