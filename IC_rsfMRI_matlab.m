@@ -1,4 +1,3 @@
-%Getting the required subdir
 clc
 clear
 tic
@@ -8,9 +7,9 @@ tic
 %------------------------------------------------------------------------------%
 
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
-pca_savedir = 'E:\LRCBH\Results\Matlab\1.PCA\Useful';
-ica_savedir = 'E:\LRCBH\Results\Matlab\ICA_100_results\1.ICA';
-dr_savedir = 'E:\LRCBH\Results\Matlab\ICA_50_results\5.DR_v2';
+pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Additional';
+ica_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\1.ICA';
+dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR';
 fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\3.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
 dirpath = dir(rootdir);
@@ -22,7 +21,7 @@ subloc(ismember(subloc,{'.','..'})) = [];
 %                     ACQUIRING CRUCIAL VOXEL INFORMATION
 %------------------------------------------------------------------------------%
 
-cd('E:\LRCBH\MNI_segmented');
+cd('E:\LRCBH\Data\MNI_segmented');
 %cd('W:\MNI_segmented')
 m = load_untouch_nii('standard_binary.nii');
 M = m.img;
@@ -149,6 +148,7 @@ end
 fluency_dir = 'E:\LRCBH\Projects\COBRE\Results\Documents\Excel';
 % Specifying the corresponding patient indices
 noise_idx =[2,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99]; % ICA 100
+noise_idx = [];
 all_idx = [1:102]';
 grp1_idx = [1,2,5,9,12,17,20,22,30,31,32,36,38,39,42,43,44,45,46,48,49,50,51,54,56,57,58,...
     59,60,61,62,64,67,69,72,75,76,78,80,81,82,83,84,86,87,88,89,94,100,101,102];
@@ -164,7 +164,10 @@ neg_range = [-0.6, -0.4];
 [grp2.fluency_ratio, grp2.subinfo, grp2.fcn_matrix, grp2.rsn_loc, grp2.correlation_coefficient, ...
     grp2.min_correlation, grp2.max_correlation, grp2.number, grp2.poscorrelation_value, grp2.negcorrelation_value, grp2.pos_rsn, grp2.neg_rsn] = ...
     fcnmat_results(fcn_savedir, fluency_dir, grp2_idx,noise_idx,2, edges, pos_range, neg_range);
-save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('Correlation_fluency_results_%d.mat',100)),'grp1','grp2');
+[grp_all.fluency_ratio, grp_all.subinfo, grp_all.fcn_matrix, grp_all.rsn_loc, grp_all.correlation_coefficient, ...
+    grp_all.min_correlation, grp_all.max_correlation, grp_all.number, grp_all.poscorrelation_value, grp_all.negcorrelation_value, grp_all.pos_rsn, grp_all.neg_rsn] = ...
+    fcnmat_results(fcn_savedir, fluency_dir, all_idx,noise_idx,3, edges, pos_range, neg_range);
+save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('Correlation_fluency_results_%d.mat',100)),'grp1','grp2','grp_all');
 
 %------------------------------------------------------------------------------%
 %   BAR PLOT SHOWING THE DISTRIBUTION OF CORRELATION VALUES
@@ -172,21 +175,27 @@ save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('
 
 xloc = [1,2,3,4,5,6];
 % Grp1
+grp1_number = grp1.number;
+grp1_percent = (grp1_number/sum(grp1_number))*100;
 figure;
-bar(xloc, grp1.number, 0.5,'r');
+bar(xloc, grp1_percent, 0.5);
 ax=gca;
-ax.FontSize=15;
+ax.FontSize=24;
 xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp I - Normal Cognition','fontweight','bold','FontSize',24);
+ylabel(' Percentage of connections ','fontweight','bold','FontSize',32);
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',32);
+title(' Grp I - Normal Cognition','fontweight','bold','FontSize',40);
 % Grp2
+grp2_number = grp2.number;
+grp2_percent = (grp2_number/sum(grp2_number))*100;
 figure;
-bar(xloc, grp2.number);
+bar(xloc, grp2_percent, 0.5);
 ax=gca;
-ax.FontSize=15;
+ax.FontSize=24;
 xticklabels({'[-0.6 : -0.4]','[-0.4 : -0.2]','[-0.2 : 0.0]','[0.0 : 0.2]','[0.2 : 0.4]','[0.4 : 0.6]'});
-xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',18);
-title(' Grp II - MCI','fontweight','bold','FontSize',24);
+ylabel(' Percentage of connections ','fontweight','bold','FontSize',32);
+xlabel(' Correlation coefficient : Range ','fontweight','bold','FontSize',32);
+title(' Grp II - MCI','fontweight','bold','FontSize',40);
 
 %---------------------Boxplot with data scattared-------------------------%
 a1 = (grp1.correlation_coefficient)';

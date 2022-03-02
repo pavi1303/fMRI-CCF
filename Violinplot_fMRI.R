@@ -13,7 +13,7 @@ ggplot(data1, aes(x=factor(Group), y=Correlation_coefficient, fill=Cognition_sta
   geom_boxplot(width=0.06, color="white",position=position_dodge(0.9),alpha=0.5,lwd=1.0,outlier.shape=NA,show.legend = FALSE)+
   scale_fill_manual(values=c("deepskyblue1", "darkgoldenrod1"),name = "Cognition status", labels = c("Normal cognition","MCI"))+
   labs(y = "Correlation coefficient")+
-  ggtitle("Violin plot - Group comparison")+
+  ggtitle("Correlation coefficient across groups")+
   scale_x_discrete(labels=c("A" = "", "B" = ""))+
   theme_bw()+
   theme(text=element_text(size=18,  family="serif"))+

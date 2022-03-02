@@ -6,8 +6,10 @@ if grp_id ==1
     fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 12 52 12]);
 elseif grp_id==2
     fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[53 12 103 12]);
+elseif grp_id==3
+    fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 12 103 12]);
 else
-    fprintf('There are only 2 groups. Group index is out of bounds');
+    fprintf('Invalid choice\n');
 end
 % Getting the list of patients in the corresponding group
 dirloc = dir(fcn_dir);

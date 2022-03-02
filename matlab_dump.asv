@@ -425,21 +425,9 @@ Z2 = Z(edge,:);
 Z(edge,:)=[];
 pos = find(grp1.rsn_loc(:,1)==Z(1,1)& grp1.rsn_loc(:,2) ==Z(1,2));
 for i = 1:size(Z,1)
-    pos(i,:) = find(rsn_all(:,1)==Z(i,1) & rsn_all(:,2) ==Z(i,2));
+    pos(i,:) = find(grp1.rsn_loc(:,1)==Z(i,1)& grp1.rsn_loc(:,2) ==Z(i,2));
 end
 
-pos1 = sort(pos);
-corr_shortlisted = find(pos1<2850);
-corr_shortlist = pos1(1:120,1);
-rsn_oi = grp1.rsn_loc(corr_shortlist,:);
-corr_comparison(1,:) = grp1.correlation_coefficient(corr_shortlist,1);
-corr_comparison(2,:) = grp2.correlation_coefficient(corr_shortlist,1);
-diff = minus(corr_comparison(1,:),corr_comparison(2,:));
-diff_loc = find(0.3<diff | diff<-0.3);
-diff_shortlisted = diff(1,diff_loc);
-corr_shortlisted = corr_comparison(:,diff_loc);
-rsn_shortlisted = rsn_oi(diff_loc,:);
 %%%%
 rsn = grp1.rsn_loc;
-rsn1 = fliplr(rsn);
-rsn_all = vertcat(rsn, rsn1);
+
