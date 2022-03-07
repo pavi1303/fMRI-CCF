@@ -473,3 +473,6 @@ V=diag(inv(R))';
 
 % Calculating the p-value
 [h,p] = ttest(S(83,:),S(50,:));
+
+
+% Testing out the regression analysis
