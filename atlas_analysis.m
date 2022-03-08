@@ -94,20 +94,20 @@ for j = 1:length(subloc)
     current = strcat(fcn_savedir,'\',sub);
     sub_fcn = load(current,'fcn_roi');
     sub_fcn = sub_fcn.fcn_roi;
-    fcn_aud = getfc(sub_fcn,1,1);
-    fcn_bas = getfc(sub_fcn,2,2);
-    fcn_lecn = getfc(sub_fcn,3,3);
-    fcn_lang = getfc(sub_fcn,4,4);
-    fcn_mot = getfc(sub_fcn,5,5);
-    fcn_prec = getfc(sub_fcn,6,6);
-    fcn_recn = getfc(sub_fcn,7,7);
-    fcn_sal = getfc(sub_fcn,8,8);
-    fcn_visspa = getfc(sub_fcn,9,9);
-    fcn_ddmn = getfc(sub_fcn,10,10);
-    fcn_hvis = getfc(sub_fcn,11,11);
-    fcn_psal = getfc(sub_fcn,12,12);
-    fcn_pvis = getfc(sub_fcn,13,13);
-    fcn_vdmn = getfc(sub_fcn,12,14);
+    fcn_aud = getfc_v1(sub_fcn,1);
+    fcn_bas = getfc_v1(sub_fcn,2);
+    fcn_lecn = getfc_v1(sub_fcn,3);
+    fcn_lang = getfc_v1(sub_fcn,4);
+    fcn_mot = getfc_v1(sub_fcn,5);
+    fcn_prec = getfc_v1(sub_fcn,6);
+    fcn_recn = getfc_v1(sub_fcn,7);
+    fcn_sal = getfc_v1(sub_fcn,8);
+    fcn_visspa = getfc_v1(sub_fcn,9);
+    fcn_ddmn = getfc_v1(sub_fcn,10);
+    fcn_hvis = getfc_v1(sub_fcn,11);
+    fcn_psal = getfc_v1(sub_fcn,12);
+    fcn_pvis = getfc_v1(sub_fcn,13);
+    fcn_vdmn = getfc_v1(sub_fcn,14);
     fcn_all = horzcat(fcn_aud,fcn_aud,fcn_bas,fcn_lecn,fcn_lang,fcn_mot,fcn_mot,fcn_prec,...
        fcn_recn,fcn_sal,fcn_visspa,fcn_ddmn,fcn_hvis,fcn_psal,fcn_pvis,fcn_vdmn);
     fcn_all_mean = horzcat(mean(fcn_aud),mean(fcn_bas),mean(fcn_lecn),...
@@ -117,19 +117,59 @@ for j = 1:length(subloc)
     Y(j,:) = fcn_all;
     Y_mean(j,:) = fcn_all_mean;
 end
-
 clearvars -except X Y Y_mean ;
 % Fitting the regression model
+mlr_roi_model= struct;
 for k=1:size(Y_mean,2)
     fprintf('Fitting the linear regression model for rsn group %d...\n',k);
-    lr_model{k,1} = fitlm(X,Y_mean(:,k),'RobustOpts','ols');
-    coeff(k,:) = lr_model{k,1}.Coefficients.Estimate;
-    pval(k,:) = lr_model{k,1}.Coefficients.pValue;
-    tstat(k,:) = lr_model{k,1}.Coefficients.tStat;
-    Rsquared_orig(k,:) = lr_model{k,1}.Rsquared.Ordinary;
-    Rsquared_adjust(k,:) = lr_model{k,1}.Rsquared.Adjusted;
-    Yfitted(:,k) = lr_model{k,1}.Fitted;
-    residuals_raw(:,k) = lr_model{k,1}.Residuals.Raw;
-    residuals_std(:,k) = lr_model{k,1}.Residuals.Raw;
-    ms_error(k,1) = lr_model{k,1}.MSE;
+    mlr_roi_model.lr_model{k,1} = fitlm(X,Y_mean(:,k),'RobustOpts','ols');
+    mlr_roi_model.coeff(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.Estimate;
+    mlr_roi_model.pval(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.pValue;
+    mlr_roi_model.tstat(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.tStat;
+    mlr_roi_model.Rsquared_orig(k,:) = mlr_roi_model.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_roi_model.Rsquared_adjust(k,:) = mlr_roi_model.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_roi_model.Yfitted(:,k) = mlr_roi_model.lr_model{k,1}.Fitted;
+    mlr_roi_model.residuals_raw(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Raw;
+    mlr_roi_model.residuals_std(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Raw;
+    mlr_roi_model.ms_error(k,1) = mlr_roi_model.lr_model{k,1}.MSE;
 end
+mlr_roi_model.X = X;
+mlr_roi_model.Y = Y_mean;
+% 
+X1 = X(:,1:3);
+Y1 = mlr_roi_model.Yfitted;
+clearvars -except X1 Y1 mlr_roi_model
+mlr_roi_model_regressed = struct;
+for k=1:size(Y1,2)
+    fprintf('Fitting the linear regression model for rsn group %d...\n',k);
+    mlr_roi_model_regressed.lr_model{k,1} = fitlm(X1,Y1(:,k),'RobustOpts','ols');
+    mlr_roi_model_regressed.coeff(k,:) = mlr_roi_model_regressed.lr_model{k,1}.Coefficients.Estimate;
+    mlr_roi_model_regressed.pval(k,:) = mlr_roi_model_regressed.lr_model{k,1}.Coefficients.pValue;
+    mlr_roi_model_regressed.tstat(k,:) = mlr_roi_model_regressed.lr_model{k,1}.Coefficients.tStat;
+    mlr_roi_model_regressed.Rsquared_orig(k,:) = mlr_roi_model_regressed.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_roi_model_regressed.Rsquared_adjust(k,:) = mlr_roi_model_regressed.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_roi_model_regressed.Yfitted(:,k) = mlr_roi_model_regressed.lr_model{k,1}.Fitted;
+    mlr_roi_model_regressed.residuals_raw(:,k) = mlr_roi_model_regressed.lr_model{k,1}.Residuals.Raw;
+    mlr_roi_model_regressed.residuals_std(:,k) = mlr_roi_model_regressed.lr_model{k,1}.Residuals.Raw;
+    mlr_roi_model_regressed.ms_error(k,1) = mlr_roi_model_regressed.lr_model{k,1}.MSE;
+end
+mlr_roi_model_regressed.X = X1;
+mlr_roi_model_regressed.Y = Y1;
+tstat(:,1) = mlr_roi_model.tstat(:,4);
+tstat(:,2) = mlr_roi_model_regressed.tstat(:,4);
+pval(:,1) = mlr_roi_model.pval(:,4);
+pval(:,2) = mlr_roi_model_regressed.pval(:,4);
+save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear',...
+    sprintf('mlr_roi_results_averaged.mat')),'mlr_roi_model','mlr_roi_model_regressed','tstat','region_list','pval');
+% Plotting the distribution of the residuals
+[f1,xi1] = ksdensity(mlr_roi_model_regressed.residuals_raw(:,4));
+figure;
+plot(xi1,f1)
+%lgd = legend('Phonemic fluency');
+title('Residuals : Interaction term');
+% QQ-plot
+figure;
+qqplot(mlr_roi_model_regressed.residuals_std(:,4));
+title('Residuals : Interaction term');
+
+

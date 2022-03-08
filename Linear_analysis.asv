@@ -79,11 +79,11 @@ for j = 1:length(subloc)
     fcn_mem = getfc(sub_fcn,29,44);
     fcn_sub = getfc(sub_fcn,45,53);
     fcn_cer = getfc(sub_fcn,54,64);
-    fcn_mot = getfc(sub_fcn,65,70);
-    fcn_sen = getfc(sub_fcn,71,74);
-    fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_mot,fcn_sen);
+    fcn_senmot = getfc(sub_fcn,65,74);
+    %fcn_sen = getfc(sub_fcn,71,74);
+    fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_senmot);
     fcn_all_mean = horzcat(mean(fcn_vis),mean(fcn_aud),mean(fcn_lang),mean(fcn_mem),...
-        mean(fcn_sub),mean(fcn_cer),mean(fcn_mot),mean(fcn_sen));
+        mean(fcn_sub),mean(fcn_cer),mean(fcn_senmot));
     Y(j,:) = fcn_all;
     Y_mean(j,:) = fcn_all_mean;
 end
@@ -95,20 +95,116 @@ XT = X1';
 XM = XT*X1;
 XINV = inv(XM);
 b = (XINV*(XT*Y_mean))';
-% Peforming multiple linear regression model - averaged across groups
+%------------------------------------------------------------------------------%
+%      LINEAR REGRESSION - AVERAGED ACROSS THE GROUPS
+%------------------------------------------------------------------------------%
+% Regressing out the covariates
+mlr_model = struct;
 for k=1:size(Y_mean,2)
     fprintf('Fitting the linear regression model for rsn group %d...\n',k);
-    lr_model{k,1} = fitlm(X,Y_mean(:,k),'RobustOpts','ols');
-    coeff(k,:) = lr_model{k,1}.Coefficients.Estimate;
-    pval(k,:) = lr_model{k,1}.Coefficients.pValue;
-    tstat(k,:) = lr_model{k,1}.Coefficients.tStat;
-    Rsquared_orig(k,:) = lr_model{k,1}.Rsquared.Ordinary;
-    Rsquared_adjust(k,:) = lr_model{k,1}.Rsquared.Adjusted;
-    Yfitted(:,k) = lr_model{k,1}.Fitted;
-    residuals_raw(:,k) = lr_model{k,1}.Residuals.Raw;
-    residuals_std(:,k) = lr_model{k,1}.Residuals.Raw;
-    ms_error(k,1) = lr_model{k,1}.MSE;
+    mlr_model.lr_model{k,1} = fitlm(X,Y_mean(:,k),'RobustOpts','ols');
+    mlr_model.coeff(k,:) = mlr_model.lr_model{k,1}.Coefficients.Estimate;
+    mlr_model.pval(k,:) = mlr_model.lr_model{k,1}.Coefficients.pValue;
+    mlr_model.tstat(k,:) = mlr_model.lr_model{k,1}.Coefficients.tStat;
+    mlr_model.Rsquared_orig(k,:) = mlr_model.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_model.Rsquared_adjust(k,:) = mlr_model.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_model.Yfitted(:,k) = mlr_model.lr_model{k,1}.Fitted;
+    mlr_model.residuals_raw(:,k) = mlr_model.lr_model{k,1}.Residuals.Raw;
+    mlr_model.residuals_std(:,k) = mlr_model.lr_model{k,1}.Residuals.Raw;
+    mlr_model.ms_error(k,1) = mlr_model.lr_model{k,1}.MSE;
 end
+mlr_model.X = X;
+mlr_model.Y = Y_mean;
+% Fitting the model - after removal of the covariates
+X1 = X(:,1:3);
+Y1 = mlr_model.Yfitted;
+clearvars -except X1 Y1 mlr_model
+mlr_model_regressed = struct;
+for k=1:size(Y1,2)
+    fprintf('Fitting the linear regression model for rsn group %d...\n',k);
+    mlr_model_regressed.lr_model{k,1} = fitlm(X1,Y1(:,k),'RobustOpts','ols');
+    mlr_model_regressed.coeff(k,:) = mlr_model_regressed.lr_model{k,1}.Coefficients.Estimate;
+    mlr_model_regressed.pval(k,:) = mlr_model_regressed.lr_model{k,1}.Coefficients.pValue;
+    mlr_model_regressed.tstat(k,:) = mlr_model_regressed.lr_model{k,1}.Coefficients.tStat;
+    mlr_model_regressed.Rsquared_orig(k,:) = mlr_model_regressed.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_model_regressed.Rsquared_adjust(k,:) = mlr_model_regressed.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_model_regressed.Yfitted(:,k) = mlr_model_regressed.lr_model{k,1}.Fitted;
+    mlr_model_regressed.residuals_raw(:,k) = mlr_model_regressed.lr_model{k,1}.Residuals.Raw;
+    mlr_model_regressed.residuals_std(:,k) = mlr_model_regressed.lr_model{k,1}.Residuals.Raw;
+    mlr_model_regressed.ms_error(k,1) = mlr_model_regressed.lr_model{k,1}.MSE;
+end
+mlr_model_regressed.X = X1;
+mlr_model_regressed.Y = Y1;
+tstat(:,1) = mlr_model.tstat(:,4);
+tstat(:,2) = mlr_model_regressed.tstat(:,4);
+pval(:,1) = mlr_model.pval(:,4);
+pval(:,2) = mlr_model_regressed.pval(:,4);
+save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\Voxel_analysis\1.Linear',...
+    sprintf('mlr_results_averaged.mat')),'mlr_model','mlr_model_regressed','tstat','pval');
+
+%------------------------------------------------------------------------------%
+%              LINEAR REGRESSION - TESTING THE ASSUMPTIONS
+%------------------------------------------------------------------------------%
+%------------------------------------------------------------------------------%
+%                              1. Checking multicollinearity
+%------------------------------------------------------------------------------%
+% Checking the correlation coefficient and VIF
+cd('E:\LRCBH\Projects\COBRE\Results\Documents\Excel');
+fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 107 3]);
+age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6 107 6]);
+ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
+interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
+%suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
+%pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 103 9]);
+%sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 103 10]);
+suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 107 11]);
+mat = horzcat(interaction,fluency_ratio, age, ed, suvr_dis);
+R= corrcoef(mat);
+V=diag(inv(R))';
+%------------------------------------------------------------------------------%
+%                              2. Checking heteroscedasticity
+%------------------------------------------------------------------------------%
+% Plotting fitted values vs residuals
+% Level I - Regression
+Xi = mlr_roi_model.Yfitted(:,14);
+Yi = mlr_roi_model.residuals_raw(:,14);
+figure;
+scatter(Xi,Yi,'filled');
+hold on
+lsline
+hold off
+xlabel('Fitted values');
+ylabel('Residuals');
+title('Heteroscedasticity plot : vDMN');
+% Level II - Regression
+Xi = mlr_roi_model_regressed.Yfitted(:,14);
+Yi = mlr_roi_model_regressed.residuals_raw(:,14);
+figure;
+scatter(Xi,Yi,'filled');
+hold on
+lsline
+hold off
+xlabel('Fitted values');
+ylabel('Residuals');
+title('Heteroscedasticity plot : vDMN');
+%------------------------------------------------------------------------------%
+%                              2. Checking normality
+%------------------------------------------------------------------------------%
+figure;
+qqplot(mlr_model_regressed.residuals_std(:,4));
+title('Residuals : Interaction term');
+% Testing heteroscedasticity
+x = mlr_model.Yfitted(:,4);
+y = mlr_model.residuals_std(:,4);
+figure;
+scatter(x,y);
+% For the model before regressing out the covariates
+Y_lang_grp1 = mlr_model.Yfitted(1:51,4);
+Y_lang_grp2 = mlr_model.Yfitted(52:end,4);
+[~,~,~,stats] = ttest2(Y_lang_grp1,Y_lang_grp2);
+% Generating the fit plot for the regression
+scatter(mlr_model_regressed.X(:,1),mlr_model.Yfitted(:,4));
+
 % Fitting multiple linear regression model - individual connections
 for k=1:size(Y,2)
     fprintf('Fitting the linear regression model for rsn group %d...\n',k);
@@ -134,7 +230,7 @@ avg_tstat(1,8) = mean(tstat(2696:2701,4));
 %------------------------------------------------------------------------------%
 %             BOOTSTRAP AGGREGATION - USING TREBAGGER
 %------------------------------------------------------------------------------%
-% 1. Finding the optimal leaf size
+% 1. Optimizing for the minimum leaf size
 for j = 1:size(Y_mean,2)
     Y1 = Y_mean(:,j);
     isCategorical = [0,1,0,0,0,0];
@@ -149,7 +245,7 @@ for j = 1:size(Y_mean,2)
             'MinLeafSize',leaf(i));
         plot(oobError(b),col(i))
     end
-    title('Network %d',j);
+    title(['RSN group ', sprintf('%d',j)]);
     xlabel('Number of Grown Trees');
     ylabel('Mean Squared Error');
     legend({'5' '10' '20' '50' '100'},'Location','NorthEast');
@@ -158,12 +254,14 @@ end
 
 % 2. Estimating feature importance
 for j = 1:size(Y_mean,2)
-    b = TreeBagger(50,X,Y_mean(:,j),'Method','regression', ...
+    isCategorical = [0,1,0,0,0,0];
+    b = TreeBagger(1000,X,Y_mean(:,j),'Method','regression', ...
         'OOBPredictorImportance','On', ...
         'CategoricalPredictors',find(isCategorical == 1), ...
         'MinLeafSize',100);
     figure;
     plot(oobError(b));
+    title(['RSN group ', sprintf('%d',j)]);
     xlabel('Number of Grown Trees');
     ylabel('Out-of-Bag Mean Squared Error');
 end
@@ -191,13 +289,42 @@ for k=1:size(Y_mean,2)
         'OOBPredictorImportance','on');
 end
 
-%%%%%%%%%%% COMPARING THE FLUENCY RATIO
-load carsmall
-Cylinders = categorical(Cylinders);
-Mfg = categorical(cellstr(Mfg));
-Model_Year = categorical(Model_Year);
-X = table(Acceleration,Cylinders,Displacement,Horsepower,Mfg,...
-    Model_Year,Weight,MPG);
-rng('default'); % For reproducibility
-Mdl = TreeBagger(200,X,'MPG','Method','regression','Surrogate','on',...
-    'PredictorSelection','curvature','OOBPredictorImportance','on');
+%------------------------------------------------------------------------------%
+%     BOOTSTRAP AGGREGATION - HYPERPARAMETER OPTIMIZATION
+%------------------------------------------------------------------------------%
+% Optimizing the minimum leaf size
+for j = 1:size(Y_mean,2)
+    Y1 = Y_mean(:,j);
+    isCategorical = [0,1,0,0,0,0];
+    leaf = [5 10 20 50 100];
+    col = 'rbcmk';
+    figure
+    hold on
+    for i=1:length(leaf)
+        b = TreeBagger(50,X,Y1,'Method','regression', ...
+            'OOBPrediction','On', ...
+            'CategoricalPredictors',find(isCategorical == 1), ...
+            'MinLeafSize',leaf(i));
+        plot(oobError(b),col(i))
+    end
+    title(['RSN group ', sprintf('%d',j)]);
+    xlabel('Number of Grown Trees');
+    ylabel('Mean Squared Error');
+    legend({'5' '10' '20' '50' '100'},'Location','NorthEast');
+    hold off
+end
+%Optimizing for the number of trees
+for j = 1:size(Y_mean,2)
+    isCategorical = [0,1,0,0,0,0];
+    b = TreeBagger(1000,X,Y_mean(:,j),'Method','regression', ...
+        'OOBPredictorImportance','On', ...
+        'CategoricalPredictors',find(isCategorical == 1), ...
+        'MinLeafSize',100);
+    figure;
+    plot(oobError(b));
+    title(['RSN group ', sprintf('%d',j)]);
+    xlabel('Number of Grown Trees');
+    ylabel('Out-of-Bag Mean Squared Error');
+end
+
+
