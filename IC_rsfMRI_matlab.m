@@ -7,7 +7,7 @@ tic
 %------------------------------------------------------------------------------%
 
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
-pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Additional';
+pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Useful';
 ica_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\1.ICA';
 dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR';
 fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\3.FCN';

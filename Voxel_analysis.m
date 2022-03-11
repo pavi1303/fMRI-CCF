@@ -188,7 +188,7 @@ xlabel('Fitted values');
 ylabel('Residuals');
 title('Heteroscedasticity plot : vDMN');
 %------------------------------------------------------------------------------%
-%                              2. Checking normality
+%                              3. Checking normality
 %------------------------------------------------------------------------------%
 figure;
 qqplot(mlr_model_regressed.residuals_std(:,4));
@@ -204,7 +204,48 @@ Y_lang_grp2 = mlr_model.Yfitted(52:end,4);
 [~,~,~,stats] = ttest2(Y_lang_grp1,Y_lang_grp2);
 % Generating the fit plot for the regression
 scatter(mlr_model_regressed.X(:,1),mlr_model.Yfitted(:,4));
-
+%------------------------------------------------------------------------------%
+%                              Scatter plot - Yfitted vs Fluency score
+%------------------------------------------------------------------------------%
+% For language group
+figure;
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,3),mlr_model_regressed.X(:,2));
+title('Language RSN');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,3),'-r','LineWidth',1);
+legend('off');
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,3),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For memory retrieval and cognition
+figure;
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,4),mlr_model_regressed.X(:,2));
+title('Memory retrieval + cognition RSN');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
+legend('off');
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For language group
+figure;
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,7),mlr_model_regressed.X(:,2));
+title('Sensorimotor RSN');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,7),'-r','LineWidth',1);
+legend('off');
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,7),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
 % Fitting multiple linear regression model - individual connections
 for k=1:size(Y,2)
     fprintf('Fitting the linear regression model for rsn group %d...\n',k);
@@ -305,7 +346,7 @@ for j = 1:size(Y_mean,2)
             'OOBPrediction','On', ...
             'CategoricalPredictors',find(isCategorical == 1), ...
             'MinLeafSize',leaf(i));
-        plot(oobError(b),col(i))
+        plot(smooth(oobError(b)),col(i))
     end
     title(['RSN group ', sprintf('%d',j)]);
     xlabel('Number of Grown Trees');
@@ -313,18 +354,43 @@ for j = 1:size(Y_mean,2)
     legend({'5' '10' '20' '50' '100'},'Location','NorthEast');
     hold off
 end
+% Min leaf size is chosen as 20
 %Optimizing for the number of trees
 for j = 1:size(Y_mean,2)
+    Y1 = Y_mean(:,j);
     isCategorical = [0,1,0,0,0,0];
-    b = TreeBagger(1000,X,Y_mean(:,j),'Method','regression', ...
-        'OOBPredictorImportance','On', ...
-        'CategoricalPredictors',find(isCategorical == 1), ...
-        'MinLeafSize',100);
-    figure;
-    plot(oobError(b));
+    leaf = 20;
+    col = 'rbcmk';
+    figure
+    hold on
+    for i=1:length(leaf)
+        b = TreeBagger(100,X,Y1,'Method','regression', ...
+            'OOBPrediction','On', ...
+            'CategoricalPredictors',find(isCategorical == 1), ...
+            'MinLeafSize',leaf(i));
+        plot(smooth(oobError(b)),col(i))
+    end
     title(['RSN group ', sprintf('%d',j)]);
     xlabel('Number of Grown Trees');
-    ylabel('Out-of-Bag Mean Squared Error');
+    ylabel('Mean Squared Error');
+    legend({'20'},'Location','NorthEast');
+    hold off
 end
-
-
+% The number of trees is chosen as 100
+% Training the regression model on the entire dataset 
+cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear');
+s = load('mlr_roi_results_averaged.mat');
+X = s.mlr_roi_model.X;
+Y = s.mlr_roi_model.Y;
+clearvars -except X Y;
+for j = 1:size(Y,2)
+    Y1 = Y(:,j);
+    isCategorical = [0,1,0,0,0,0];
+    leaf = 20;
+    for i=1:length(leaf)
+        b = TreeBagger(100,X,Y1,'Method','regression', ...
+            'OOBPredictorImportance','On', ...
+            'CategoricalPredictors',find(isCategorical == 1), ...
+            'MinLeafSize',leaf(i));
+    end
+end

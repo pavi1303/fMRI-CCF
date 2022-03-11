@@ -171,5 +171,73 @@ title('Residuals : Interaction term');
 figure;
 qqplot(mlr_roi_model_regressed.residuals_std(:,4));
 title('Residuals : Interaction term');
-
-
+%------------------------------------------------------------------------------%
+%                              Scatter plot - Yfitted vs Fluency score
+%------------------------------------------------------------------------------%
+% For Left executive control network ROI
+cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear');
+load('mlr_roi_results_averaged.mat');
+figure;
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,3),mlr_roi_model_regressed.X(:,2));
+title('LECN ROI');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,3),'-r','LineWidth',1);
+legend('off');
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,3),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For language ROI
+figure;
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,4),mlr_roi_model_regressed.X(:,2));
+title('Language ROI');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
+legend('off');
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For precuneus ROI
+figure;
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,6),mlr_roi_model_regressed.X(:,2));
+title('Precuneus ROI');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,6),'-r','LineWidth',1);
+legend('off');
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,6),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For motor ROI
+figure;
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,5),mlr_roi_model_regressed.X(:,2));
+title('Motor ROI');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,5),'-r','LineWidth',1);
+legend('off');
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,5),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
+% For primary visual ROI
+figure;
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,10),mlr_roi_model_regressed.X(:,2));
+title('dDMN ROI');
+ylabel('Mean FC value');
+xlabel('Fluency ratio');
+hold on;
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,10),'-r','LineWidth',1);
+legend('off');
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,10),'-c','LineWidth',1);
+legend('off');
+legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+hold off;
