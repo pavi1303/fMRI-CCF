@@ -1,6 +1,7 @@
 clear all
+
 pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Useful';
-dr_savedir ='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\Useful';
+qa_savedir ='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\QA';
 cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\1.ICA');
 load('gica_100_result.mat');
 dirpath = dir(dr_savedir);
@@ -25,7 +26,9 @@ reordered_idx = horzcat(visual_idx,auditory_idx,language_idx,...
     mem_cog_idx,subcortical_idx,cerebellar_idx,motor_idx,sensory_idx,noise_idx);
 
 clearvars -except reordered_idx subloc subpath dr_savedir pca_savedir S;
-
+%------------------------------------------------------------------------------%
+%                 QA PROCESS - SHORTLISTING PATIENTS NEEEDING FLIP
+%------------------------------------------------------------------------------%
 for i= 1:length(subloc)
     fprintf('Doing the QA for subject %d..\n',i);
     sub = subloc{i};
@@ -63,12 +66,67 @@ RR_OI = RR(:,1:74);
 for i = 1:size(idx,1)
     val(i,1) = RR_OI(idx(i,1),idx(i,2));
 end
-idx = horzcat(row, col, val);
-idx1 = sortrows(idx);
-pat_freq = [pat,histc(idx(:,1),pat)];
-rsn_freq = [rsn,histc(idx(:,2),rsn)];
 rsn = unique(col);
 pat = unique(row);
-save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('QA_results_S_v1.mat')),...
-    'reordered_idx','RR','RR_OI','idx','pat','rsn','voxel_index','val','pat_freq','rsn_freq');
+pat = subloc{pat,1};
+idx = horzcat(row, col, val);
+idx = sortrows(idx);
+pat_freq = [pat,histc(idx(:,1),pat)];
+rsn_freq = [rsn,histc(idx(:,2),rsn)];
 
+save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results',sprintf('QA_results_ss_sm_v1.mat')),...
+    'reordered_idx','RR','RR_OI','idx','pat','rsn','voxel_index','val','pat_freq','rsn_freq');
+%------------------------------------------------------------------------------%
+%                 QA PROCESS - ACTUAL FLIPPING OF SIGNS 
+%------------------------------------------------------------------------------%
+% Importing the mask and other details
+qa_savedir ='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\QA';
+cd('E:\LRCBH\Data\MNI_segmented');
+%cd('W:\MNI_segmented')
+m = load_untouch_nii('standard_binary.nii');
+M = m.img;
+nii_temp = m;
+[x, y, z] = size(M);
+mask_temp = reshape(M, [1,x*y*z]);
+[~, indices] = find(mask_temp);
+% FLIPPING OF SIGNS OF THE SPATIAL MAPS AND THE TIME COURSES FOR THE
+% SHORTLISTED SUBJECTS
+dr_savedir ='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\Useful';
+dirpath = dir(dr_savedir);
+subdir = [dirpath(:).isdir];
+subloc = {dirpath(subdir).name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results');
+dat = load('QA_results_S_v1.mat');
+pat = dat.pat;
+idx = dat.idx;
+% Finding the RSN'S that need to be changed for each of the patients
+for i = 1:length(pat)
+    rsn_loc{i,1} = (idx(idx(:,1)==pat(i,1),2))';
+end
+% Reducing the patients list to just the patients that require flipping
+for j = 1:length(pat)
+    subloc1{j,1} = subloc{pat(j,1),1};
+end
+k=1;
+for k=1:length(subloc1)
+    rsn_idx = rsn_loc{k,1};
+    sub = subloc1{k};
+    current = strcat(dr_savedir,'\', sub);
+    cd(current);
+    dr = load('dualregression.mat');
+    ss_tc = dr.ss_tc;
+    ss_sm = dr.ss_sm;
+    for l=1:length(rsn_idx)
+        ss_tc(rsn_idx(1,l),:)= -ss_tc(rsn_idx(1,l),:);
+        ss_sm(:,rsn_idx(1,l))= -ss_sm(:,rsn_idx(1,l));
+    end
+    % Replacing the old values with the new adjusted ones
+    ss_dr_dir = strcat(qa_savedir,'\',sub);
+    if ~exist(ss_dr_dir,'dir')
+        mkdir(ss_dr_dir);
+    end
+    save(fullfile(ss_dr_dir,sprintf('dualregression.mat')),'ss_tc',"ss_sm");
+    % Saving the independent components as nii images
+    save_ica_nii(ss_sm',x,y,z,indices,m,'ica_',ss_dr_dir);
+end
