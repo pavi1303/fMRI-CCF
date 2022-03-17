@@ -16,8 +16,8 @@ age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6
 ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
 interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
 %suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
-pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]);
-sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]);
+pf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]));
+sf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]));
 suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 107 11]);
 
 %regressor = horzcat(fluency_ratio, grp);
@@ -28,22 +28,38 @@ X = horzcat(regressor, covariates);
 
 % GENERATION OF THE RESPONSE VARIABLE
 % Getting the indices for the different RSN groups
+% VERSION 1
 visual_idx = [1,20,29,45,65,68,70,75,90,95];
 auditory_idx = [22,36,40,48];
 language_idx = [5,6,14,46,59,61,77,80,86,97,100,30,34,63];
-mem_cog_idx = [16,38,50,54,56,57,60,64,82,83,89,39,41,72,94,73];
+ecn_idx = [16,38,50,54,56,57,60,64,82,83,89,39,41,72,94,73];
 subcortical_idx = [3,9,11,13,15,42,69,74,76];
 cerebellar_idx =[8,18,21,24,27,37,53,58,87,91,98];
 motor_idx =[7,23,43,81,88,92];
 sensory_idx=[10,26,49,19];
 noise_idx=[2,4,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99,33];
 reordered_idx = horzcat(visual_idx,auditory_idx,language_idx,...
-    mem_cog_idx,subcortical_idx,cerebellar_idx,motor_idx,sensory_idx,noise_idx);
+    ecn_idx,subcortical_idx,cerebellar_idx,motor_idx,sensory_idx,noise_idx);
+
+% Getting the indices for the different RSN groups
+% VERSION 2
+visual_idx = [1,20,29,45,65,68,70,75,90];
+auditory_idx = [9,22];
+language_idx = [5,6,14,16,22,30,34,36,38,40,48,59,61,63,65,77,86,88,97,100];
+ecn_idx = [5,6,11,14,16,17,30,34,36,38,40,46,48,54,56,57,64,73];
+subcortical_idx = [3,9,11,13,15,42,69,74,76];
+cerebellar_idx =[8,18,21,24,27,37,53,58,87,91,95,98];
+senmot_idx =[7,23,43,81,92];
+ins_idx = [10,26,33,49,50,80,82,88,89,97];
+pre_idx=[1,19,39,41,72,90];
+noise_idx=[2,4,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96,99,33];
+reordered_idx = horzcat(visual_idx,auditory_idx,language_idx,...
+    ecn_idx,subcortical_idx,cerebellar_idx,senmot_idx,ins_idx,pre_idx,noise_idx);
 
 % Reordering the time courses to generate subject-wise functional
 % connectiviy matrices
 dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\Useful';
-fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\6.FCN_reordered_flipped';
+fcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\7.FCN_reordered_new';
 dirpath = dir(dr_savedir);
 subdir = [dirpath(:).isdir];
 subpath = {dirpath(subdir).name}';
@@ -57,11 +73,45 @@ for i=1:length(subpath)
     % Making sure the derived functional connectivity matrix reflects the
     % required order of the different rsn's
     tc_reordered = tc(:,reordered_idx);
-    [pval_flipcorrected, fcn_flipcorrected] = corrcoef(tc_reordered);
-    save(fullfile(fcn_savedir, sprintf('FCN_flipcorrected_%s.mat',sub)),'fcn_flipcorrected','pval_flipcorrected');
+    [pval_reordered_v1, fcn_reordered_v1] = corrcoef(tc_reordered);
+    save(fullfile(fcn_savedir, sprintf('FCN_reordered_v1_%s.mat',sub)),'fcn_reordered_v1','pval_reordered_v1');
 end
 
 % GENERATION OF THE RESPONSE VARIABLE
+% VERSION 2
+fcn_savedir ='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\7.FCN_reordered_new';
+dirloc = dir(fcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+% Generating the patient * fcn value matrix
+for j = 1:length(subloc)
+    sub = subloc{j};
+    current = strcat(fcn_savedir,'\',sub);
+    sub_fcn = load(current,'fcn_reordered_v1');
+    sub_fcn = sub_fcn.fcn_reordered_v1;
+    sub_fcn(:,92:end) = [];
+    sub_fcn(92:end,:) = [];
+    fcn_vis = getfc(sub_fcn,1,9);
+    fcn_aud = getfc(sub_fcn,10,11);
+    fcn_lang = getfc(sub_fcn,12,31);
+    fcn_mem = getfc(sub_fcn,32,49);
+    fcn_sub = getfc(sub_fcn,50,58);
+    fcn_cer = getfc(sub_fcn,59,70);
+    fcn_senmot = getfc(sub_fcn,71,75);
+    fcn_ins = getfc(sub_fcn,76,85);
+    fcn_pre = getfc(sub_fcn,86,91);
+    %fcn_sen = getfc(sub_fcn,71,74);
+    fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_senmot,fcn_ins,fcn_pre);
+    fcn_all_mean = horzcat(mean(fcn_vis),mean(fcn_aud),mean(fcn_lang),mean(fcn_mem),...
+        mean(fcn_sub),mean(fcn_cer),mean(fcn_senmot),mean(fcn_ins),mean(fcn_pre));
+    Y(j,:) = fcn_all;
+    Y_mean(j,:) = fcn_all_mean;
+end
+
+clearvars -except X Y Y_mean;
+
+% GENERATION OF THE RESPONSE VARIABLE
+% VERSION 1
 fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\6.FCN_reordered_flipped';
 dirloc = dir(fcn_savedir);
 subloc = {dirloc.name}';
@@ -141,7 +191,7 @@ tstat(:,2) = mlr_model_regressed.tstat(:,4);
 pval(:,1) = mlr_model.pval(:,4);
 pval(:,2) = mlr_model_regressed.pval(:,4);
 save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\Voxel_analysis\1.Linear',...
-    sprintf('mlr_results_sf_nozscore.mat')),'mlr_model','mlr_model_regressed','tstat','pval');
+    sprintf('mlr_results_sf_zscore_v1.mat')),'mlr_model','mlr_model_regressed','tstat','pval');
 
 %------------------------------------------------------------------------------%
 %              LINEAR REGRESSION - TESTING THE ASSUMPTIONS
@@ -210,8 +260,8 @@ scatter(mlr_model_regressed.X(:,1),mlr_model.Yfitted(:,4));
 %------------------------------------------------------------------------------%
 % For language group
 figure;
-gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,2),mlr_model_regressed.X(:,2));
-title('Language RSN');
+gscatter(mlr_model_regressed.X(:,1),abs(mlr_model_regressed.Y(:,2),mlr_model_regressed.X(:,2));
+title('Auditory RSN');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
@@ -223,14 +273,14 @@ legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For memory retrieval and cognition
 figure;
-gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,4),mlr_model_regressed.X(:,2));
-title('Memory retrieval + cognition RSN');
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,7),mlr_model_regressed.X(:,2));
+title('Motor RSN');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
-plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,7),'-r','LineWidth',1);
 legend('off');
-plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,7),'-c','LineWidth',1);
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;

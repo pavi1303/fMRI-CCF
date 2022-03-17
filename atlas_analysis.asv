@@ -64,8 +64,8 @@ age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6
 ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
 interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
 %suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
-pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]);
-sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]);
+pf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]));
+sf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]));
 suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 107 11]);
 
 %regressor = horzcat(fluency_ratio, grp);
@@ -115,8 +115,8 @@ for j = 1:length(subloc)
         mean(fcn_lang),mean(fcn_mot),mean(fcn_prec),mean(fcn_recn),...
         mean(fcn_sal),mean(fcn_visspa),mean(fcn_ddmn),mean(fcn_hvis),mean(fcn_psal),...
         mean(fcn_pvis),mean(fcn_vdmn));
-    Y(j,:) = fcn_all;
-    Y_mean(j,:) = fcn_all_mean;
+    Y(j,:) = abs(fcn_all);
+    Y_mean(j,:) = abs(fcn_all_mean);
 end
 
 clearvars -except X Y Y_mean ;
@@ -162,7 +162,7 @@ tstat(:,2) = mlr_roi_model_regressed.tstat(:,4);
 pval(:,1) = mlr_roi_model.pval(:,4);
 pval(:,2) = mlr_roi_model_regressed.pval(:,4);
 save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear',...
-    sprintf('mlr_roi_results_sf_nozscore.mat')),'mlr_roi_model','mlr_roi_model_regressed','tstat','region_list','pval');
+    sprintf('mlr_roi_results_sf_zscore.mat')),'mlr_roi_model','mlr_roi_model_regressed','tstat','region_list','pval');
 % Plotting the distribution of the residuals
 [f1,xi1] = ksdensity(mlr_roi_model_regressed.residuals_raw(:,4));
 figure;
@@ -180,7 +180,7 @@ title('Residuals : Interaction term');
 cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear');
 load('mlr_roi_results_averaged.mat');
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,3),mlr_roi_model_regressed.X(:,2));
+gscatter(mlr_roi_model_regressed.X(:,1),abs(mlr_roi_model_regressed.Y(:,3)),mlr_roi_model_regressed.X(:,2));
 title('LECN ROI');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
@@ -193,27 +193,27 @@ legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For language ROI
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Yfitted(:,4),mlr_roi_model_regressed.X(:,2));
-title('Language ROI');
-ylabel('Mean FC value');
-xlabel('Fluency ratio');
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,2),mlr_roi_model_regressed.X(:,2));
+title('Basal ganglia fROI');
+ylabel('Mean ROI connectivity');
+xlabel('Semantic fluency (z-score)');
 hold on;
-plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,2),'-r','LineWidth',1);
 legend('off');
-plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,2),'-c','LineWidth',1);
 legend('off');
-legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
+legend({'NC', 'MCI'}, 'Location','southoutside');
 hold off;
 % For precuneus ROI
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,6),mlr_roi_model_regressed.X(:,2));
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,8),mlr_roi_model_regressed.X(:,2));
 title('Precuneus ROI');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
-plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,6),'-r','LineWidth',1);
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,8),'-r','LineWidth',1);
 legend('off');
-plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,6),'-c','LineWidth',1);
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,8),'-c','LineWidth',1);
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;

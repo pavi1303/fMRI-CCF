@@ -110,7 +110,7 @@ for j = 1:length(subloc)
     fcn_pvis = getfc_v1(sub_fcn,13);
     fcn_vdmn = getfc_v1(sub_fcn,14);
     fcn_all = horzcat(fcn_aud,fcn_aud,fcn_bas,fcn_lecn,fcn_lang,fcn_mot,fcn_mot,fcn_prec,...
-       fcn_recn,fcn_sal,fcn_visspa,fcn_ddmn,fcn_hvis,fcn_psal,fcn_pvis,fcn_vdmn);
+        fcn_recn,fcn_sal,fcn_visspa,fcn_ddmn,fcn_hvis,fcn_psal,fcn_pvis,fcn_vdmn);
     fcn_all_mean = horzcat(mean(fcn_aud),mean(fcn_bas),mean(fcn_lecn),...
         mean(fcn_lang),mean(fcn_mot),mean(fcn_prec),mean(fcn_recn),...
         mean(fcn_sal),mean(fcn_visspa),mean(fcn_ddmn),mean(fcn_hvis),mean(fcn_psal),...
@@ -137,7 +137,7 @@ for k=1:size(Y_mean,2)
 end
 mlr_roi_model.X = X;
 mlr_roi_model.Y = Y_mean;
-% 
+%
 X1 = X(:,1:3);
 Y1 = mlr_roi_model.Yfitted;
 clearvars -except X1 Y1 mlr_roi_model
@@ -180,7 +180,7 @@ title('Residuals : Interaction term');
 cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear');
 load('mlr_roi_results_averaged.mat');
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,3),mlr_roi_model_regressed.X(:,2));
+gscatter(mlr_roi_model_regressed.X(:,1),abs(mlr_roi_model_regressed.Y(:,3)),mlr_roi_model_regressed.X(:,2));
 title('LECN ROI');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
@@ -193,27 +193,27 @@ legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For language ROI
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,6),mlr_roi_model_regressed.X(:,2));
-title('Language ROI');
-ylabel('Mean FC value');
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,8),mlr_roi_model_regressed.X(:,2));
+title('Salience fROI');
+ylabel('Mean ROI connectivity');
 xlabel('Semantic fluency (z-score)');
 hold on;
-plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,6),'-r','LineWidth',1);
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,8),'-r','LineWidth',1);
 legend('off');
-plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,6),'-c','LineWidth',1);
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,8),'-c','LineWidth',1);
 legend('off');
 legend({'NC', 'MCI'}, 'Location','southoutside');
 hold off;
 % For precuneus ROI
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,6),mlr_roi_model_regressed.X(:,2));
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,8),mlr_roi_model_regressed.X(:,2));
 title('Precuneus ROI');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
-plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,6),'-r','LineWidth',1);
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,8),'-r','LineWidth',1);
 legend('off');
-plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,6),'-c','LineWidth',1);
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,8),'-c','LineWidth',1);
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
@@ -243,3 +243,36 @@ plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
+
+%------------------------------------------------------------------------------%
+%                   Non-linear analysis : Randomforest regression
+%------------------------------------------------------------------------------%
+t = templateTree('NumVariablesToSample','all',...
+    'PredictorSelection','interaction-curvature','Surrogate','on');
+rng(1); % For reproducibility
+Mdl = fitrensemble(X,Y_mean(:,1),'Method','Bag','NumLearningCycles',200, ...
+    'Learners',t);
+
+load imports-85
+Y = X(:,1);
+X = X(:,2:end);
+cat_var = [0 1 0 0 0 0 0];
+b = TreeBagger(200,X,Y_mean(:,1),'Method','regression', ...
+    'OOBPredictorImportance','On', ...
+    'CategoricalPredictors',find(cat_var == 1), ...
+    'MinLeafSize',100);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
