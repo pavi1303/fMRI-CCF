@@ -9,6 +9,6 @@ for j = 1:size(ica_mat,1)
     ica_3d = reshape(temp,[xdim,ydim,zdim]);
     nii_temp.img = [];
     nii_temp.img = single(ica_3d);
-    Sname = [save_prefix,sprintf(['%0d.nii'],j)];
+    
     save_untouch_nii(nii_temp,[savepath,'\',Sname]);
 end

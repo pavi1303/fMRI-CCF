@@ -1,7 +1,7 @@
 clc
 clear all;
 
-fcn_dir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\3.FCN';
+fcn_dir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\7.FCN_reordered_new';
 fluency_dir = 'E:\LRCBH\Projects\COBRE\Results\Documents\Excel';
 
 %------------------------------------------------------------------------------%
@@ -14,7 +14,7 @@ fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','R
 grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 107 4]);
 age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6 107 6]);
 ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
-interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
+%interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
 %suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
 pf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]));
 sf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]));
@@ -22,6 +22,7 @@ suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range'
 
 %regressor = horzcat(fluency_ratio, grp);
 %regressor = horzcat(fluency_ratio, grp, interaction);
+interaction = grp*fluency_ratio;
 regressor = horzcat(sf, grp, interaction);
 covariates = horzcat(pf,age, ed, suvr_dis);
 X = horzcat(regressor, covariates);
@@ -56,6 +57,21 @@ noise_idx=[2,4,12,17,25,28,31,32,35,44,47,51,52,55,62,66,67,71,78,79,84,85,93,96
 reordered_idx = horzcat(visual_idx,auditory_idx,language_idx,...
     ecn_idx,subcortical_idx,cerebellar_idx,senmot_idx,ins_idx,pre_idx,noise_idx);
 
+% Getting the indices for the different RSN groups
+% After comparison with the Willard ROI atlas
+visual_idx = [20,29,45,68,70,75];
+auditory_idx = [22];
+language_idx = [36,40,46,48,56,59,61,77,86,88,100];
+ecn_idx = [14,16,27,36,46,48,54,56,57,59,64,77,80,83,86];
+subcortical_idx = [3,9,11,13,15,42,69,74,76];
+cerebellar_idx =[8,21,24,27,37,53,58,91,95,98];
+senmot_idx =[7,23,81,82,92];
+ins_idx = [10,49,50];
+pre_idx=[1,41,72,90];
+noise_idx=[2,4,12,17,18,19,25,26,28,30,31,32,33,35,38,39,43,44,47,51,52,55,62,63,66,67,71,73,78,79,84,85,89,93,96,97,99];
+reordered_idx = horzcat(visual_idx,auditory_idx,language_idx,...
+    ecn_idx,subcortical_idx,cerebellar_idx,senmot_idx,ins_idx,pre_idx,noise_idx);
+
 % Reordering the time courses to generate subject-wise functional
 % connectiviy matrices
 dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR\Useful';
@@ -73,7 +89,20 @@ for i=1:length(subpath)
     % Making sure the derived functional connectivity matrix reflects the
     % required order of the different rsn's
     tc_reordered = tc(:,reordered_idx);
-    [pval_reordered_v1, fcn_reordered_v1] = corrcoef(tc_reordered);
+    % Concatenating the mean tc's of the various RSN groups
+    tc_vis = mean(tc_reordered(:,1:6)');
+    tc_aud = tc_reordered(:,7)';
+    tc_lang = mean(tc_reordered(:,8:18)');
+    tc_mem = mean(tc_reordered(:,19:33)');
+    tc_sub = mean(tc_reordered(:,34:42)');
+    tc_cer = mean(tc_reordered(:,43:52)');
+    tc_senmot = mean(tc_reordered(:,53:57)');
+    tc_ins = mean(tc_reordered(:,58:60)');
+    tc_pre = mean(tc_reordered(:,61:64)');
+    tc_noise = mean(tc_reordered(:,65:end)');
+    tc_reordered_mean = horzcat(tc_vis',tc_aud',tc_lang',...
+        tc_mem',tc_sub',tc_cer',tc_senmot',tc_ins',tc_pre');
+    [pval_reordered_v1, fcn_reordered_v1] = corrcoef(tc_reordered_mean);
     save(fullfile(fcn_savedir, sprintf('FCN_reordered_v1_%s.mat',sub)),'fcn_reordered_v1','pval_reordered_v1');
 end
 
@@ -89,17 +118,17 @@ for j = 1:length(subloc)
     current = strcat(fcn_savedir,'\',sub);
     sub_fcn = load(current,'fcn_reordered_v1');
     sub_fcn = sub_fcn.fcn_reordered_v1;
-    sub_fcn(:,92:end) = [];
-    sub_fcn(92:end,:) = [];
-    fcn_vis = getfc(sub_fcn,1,9);
-    fcn_aud = getfc(sub_fcn,10,11);
-    fcn_lang = getfc(sub_fcn,12,31);
-    fcn_mem = getfc(sub_fcn,32,49);
-    fcn_sub = getfc(sub_fcn,50,58);
-    fcn_cer = getfc(sub_fcn,59,70);
-    fcn_senmot = getfc(sub_fcn,71,75);
-    fcn_ins = getfc(sub_fcn,76,85);
-    fcn_pre = getfc(sub_fcn,86,91);
+    sub_fcn(:,65:end) = [];
+    sub_fcn(65:end,:) = [];
+    fcn_vis = getfc(sub_fcn,1,6);
+    fcn_aud = getfc(sub_fcn,7,7);
+    fcn_lang = getfc(sub_fcn,8,18);
+    fcn_mem = getfc(sub_fcn,19,33);
+    fcn_sub = getfc(sub_fcn,34,42);
+    fcn_cer = getfc(sub_fcn,43,52);
+    fcn_senmot = getfc(sub_fcn,53,57);
+    fcn_ins = getfc(sub_fcn,58,60);
+    fcn_pre = getfc(sub_fcn,61,64);
     %fcn_sen = getfc(sub_fcn,71,74);
     fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_senmot,fcn_ins,fcn_pre);
     fcn_all_mean = horzcat(mean(fcn_vis),mean(fcn_aud),mean(fcn_lang),mean(fcn_mem),...
@@ -135,6 +164,32 @@ for j = 1:length(subloc)
     fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_senmot);
     fcn_all_mean = horzcat(mean(fcn_vis),mean(fcn_aud),mean(fcn_lang),mean(fcn_mem),...
         mean(fcn_sub),mean(fcn_cer),mean(fcn_senmot));
+    Y(j,:) = fcn_all;
+    Y_mean(j,:) = fcn_all_mean;
+end
+
+% GENERATION OF THE RESPONSE VARIABLE
+% VERSION WITH WILLARD ATLAS
+% GENERATION OF THE RESPONSE VARIABLE
+dirloc = dir(fcn_dir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub = subloc{j};
+    current = strcat(fcn_dir,'\',sub);
+    sub_fcn = load(current,'fcn_reordered_v1');
+    sub_fcn = sub_fcn.fcn_reordered_v1;
+    fcn_vis = getfc_v1(sub_fcn,1);
+    fcn_aud = getfc_v1(sub_fcn,2);
+    fcn_lang = getfc_v1(sub_fcn,3);
+    fcn_mem = getfc_v1(sub_fcn,4);
+    fcn_sub = getfc_v1(sub_fcn,5);
+    fcn_cer = getfc_v1(sub_fcn,6);
+    fcn_senmot = getfc_v1(sub_fcn,7);
+    fcn_ins= getfc_v1(sub_fcn,8);
+    fcn_pre = getfc_v1(sub_fcn,9);
+    fcn_all = horzcat(fcn_vis,fcn_aud,fcn_lang,fcn_mem,fcn_sub,fcn_cer,fcn_senmot,fcn_ins,fcn_pre);
+    fcn_all_mean = horzcat(mean(fcn_vis),mean(fcn_aud),mean(fcn_lang),mean(fcn_mem),mean(fcn_sub),mean(fcn_cer),mean(fcn_senmot),mean(fcn_ins),mean(fcn_pre));
     Y(j,:) = fcn_all;
     Y_mean(j,:) = fcn_all_mean;
 end
@@ -202,14 +257,16 @@ save(fullfile('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regressi
 % Checking the correlation coefficient and VIF
 cd('E:\LRCBH\Projects\COBRE\Results\Documents\Excel');
 fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 3 107 3]);
+grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 107 4]);
 age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6 107 6]);
 ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
 interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
 %suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
-%pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 103 9]);
-%sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 103 10]);
+pf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]));
+sf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]));
 suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 11 107 11]);
-mat = horzcat(interaction,fluency_ratio, age, ed, suvr_dis);
+
+mat = horzcat(interaction,pf,sf, age, ed, suvr_dis);
 R= corrcoef(mat);
 V=diag(inv(R))';
 %------------------------------------------------------------------------------%
@@ -273,27 +330,27 @@ legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For memory retrieval and cognition
 figure;
-gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,7),mlr_model_regressed.X(:,2));
-title('Motor RSN');
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,9),mlr_model_regressed.X(:,2));
+title('Language RSN');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
-plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,7),'-r','LineWidth',1);
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,9),'-r','LineWidth',1);
 legend('off');
-plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,7),'-c','LineWidth',1);
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,9),'-c','LineWidth',1);
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For language group
 figure;
-gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,7),mlr_model_regressed.X(:,2));
-title('Sensorimotor RSN');
+gscatter(mlr_model_regressed.X(:,1),mlr_model_regressed.Y(:,4),mlr_model_regressed.X(:,2));
+title('Executive control RSN');
 ylabel('Mean FC value');
 xlabel('Fluency ratio');
 hold on;
-plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,7),'-r','LineWidth',1);
+plot(mlr_model_regressed.X(1:51,1),mlr_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
 legend('off');
-plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,7),'-c','LineWidth',1);
+plot(mlr_model_regressed.X(52:end,1),mlr_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
 legend('off');
 legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
@@ -428,7 +485,7 @@ for j = 1:size(Y_mean,2)
     hold off
 end
 % The number of trees is chosen as 100
-% Training the regression model on the entire dataset 
+% Training the regression model on the entire dataset
 cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\Linear');
 s = load('mlr_roi_results_averaged.mat');
 X = s.mlr_roi_model.X;
@@ -447,7 +504,7 @@ for j = 1:size(Y,2)
 end
 
 %------------------------------------------------------------------------------%
-%        KS DENSITY PLOTS - PHONEMIC AND SEMANTIC FLUENCY
+%         KS DENSITY PLOTS - PHONEMIC AND SEMANTIC FLUENCY
 %------------------------------------------------------------------------------%
 
 % Phonemic fluency
@@ -485,3 +542,88 @@ title('Semantic fluency');
 
 [~,~,~,sf_stats] = ttest(f3,f4);
 [~,~,~,sf_stats1] = ttest2(sf_grp1,sf_grp2);
+
+%------------------------------------------------------------------------------%
+%                      NON-LINEAR REGRESSION ANALYSIS
+%------------------------------------------------------------------------------%
+% Generating the training and the testing dataset for cross validation
+cv = struct;
+dat = horzcat(X, Y_mean);
+c = cvpartition(size(dat,1),'Holdout',0.2);
+c1 = cvpartition(size(dat,1),'kFold',3);
+idx = c1.test;
+data_train = dat(~idx,:);
+data_test  = dat(idx,:);
+cv.X_train = data_train(:,1:7);
+cv.Y_train = data_train(:,8:end);
+cv.X_test = data_test(:,1:7);
+cv.Y_test = data_test(:,8:end);
+% Generating the cross-validation indices (Hold one out validation)
+N = size(Y1,1);
+indices = crossvalind('Kfold',N,3);
+c = cvpartition(N,'KFold',3);
+idxTrain = training(c);
+for i = 1:3
+    test = (indices == i);
+    train = ~test;
+    cv{i,1} = train;
+    cv{i,2} = test;
+    nl_model{i,1} = Treebagger(50,)
+end
+
+sample = X1(:,train);
+
+
+
+
+
+
+
+
+
+
+mdl = fitrtree(cv.X_train, cv.Y_train(:,1));
+Mdl = TreeBagger(100,cv.X_train(:,1), cv.Y_train(:,1),'Method','regression', 'OOBPrediction','on');
+imp = oobPermutedPredictorImportance(Mdl);
+
+figure;
+oobErrorBaggedEnsemble = oobError(Mdl);
+plot(smooth(oobErrorBaggedEnsemble));
+xlabel 'Number of grown trees';
+ylabel 'Out-of-bag classification error';
+
+view(mdl,"Mode","graph")
+Yfit = predict(mdl,cv.X_test);
+Yfit_treebagger = predict(Mdl,cv.X_test);
+plotPartialDependence(mdl,1,"Conditional","centered");
+
+p = polyfit(cv.X_test(:,1),Yfit_treebagger,7);
+y1 = polyval(p,cv.X_test(:,1));
+gscatter(cv.X_test(:,1),Yfit_treebagger,cv.X_test(:,2));
+hold on
+plot(cv.X_test(:,1),y1)
+hold off
+
+load fisheriris
+[train, test] = crossvalind('Kfold',size(dat,1),10);
+[train,test] = crossvalind('LeaveMOut',size(dat,1),1);
+
+X_train = cv.X_train;
+X_test = cv.X_test;
+Y_train = cv.Y_train;
+Y_test = cv.Y_test;
+
+% Testing the similarity between two images using jaccard index
+cd('E:\LRCBH\Atlas\Willard_with_overlap_2mm\1.Merged');
+m = load_untouch_nii('2mm_merged_Language.nii');
+M = m.img;
+
+sim = jaccard(double(M),double(M));
+cd('E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\1.ICA');
+dat = load_untouch_nii('gICA5.nii');
+I = dat.img;
+I_bin = imbinarize(I);
+sim = jaccard(double(M),double(I_bin));
+save_untouch_nii(I_bin,'gICA5_bin');
+
+

@@ -8,7 +8,7 @@ tic
 
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Useful';
-ica_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\1.ICA';
+ica_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_50_results_new';
 dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR';
 fcn_savedir='E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\3.FCN';
 asso_savedir = 'E:\LRCBH\Results\Matlab\v2\5.Association';
@@ -36,7 +36,7 @@ comp = 200;
 %                                 PCA REDUCTION
 %------------------------------------------------------------------------------%
 
-%Iterating through each of the subjects
+% Iterating through each of the subjects
 for i=1:length(subloc)
     suboi = subloc{i};
     current = strcat(rootdir,'\', suboi);
@@ -79,7 +79,7 @@ npca=50;
 
 [S,W,White,E,eigval,convergence,A,B,A_reduced,X_reduced,Sigma_reduced]=...
     ica_DC_improved(tcat_data,Sigma,method,eps,npca,A0,a1,var_normal,shift,determine_flip);
-save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'A','S','W','E','eigval','White','-v7.3');
+save(fullfile(ica_savedir,sprintf('gica_%d_result.mat',npca)),'S','W','White','E','eigval','convergence','A','B','A_reduced','X_reduced','Sigma_reduced','tcat_data','-v7.3');
 toc
 
 %------------------------------------------------------------------------------%

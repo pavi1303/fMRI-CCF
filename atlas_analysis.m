@@ -1,11 +1,16 @@
 %------------------------------------------------------------------------------%
 %         DATA PREPARATION - WILLARD ATLAS BASED ANALYSIS
 %------------------------------------------------------------------------------%
-clear all
+
+clear all       
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 atlas_loc = 'E:\LRCBH\Atlas\Willard_with_overlap_2mm\1.Merged';
 data_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\1.Data_merged';
-fcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\1.Merged';
+fcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\2.Individual\1.Full_correlation';
+pcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\2.Individual\2.Partial_correlation';
+kcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\1.Merged\3.KendallTau';
+mi_savedir_own = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Own'
+mi_savedir_inbuilt = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Inbuilt'
 
 % Getting the list of all the subjects
 dirpath = dir(rootdir);
@@ -38,8 +43,8 @@ for j = 1:length(subloc)
             I = vol.img;
             I_R = I.*roi;
             vt = reshape(I_R, [1,x*y*z]);
-            [~,idx] = find(vt);
-            vt = vt(:,idx);
+            %[~,idx] = find(vt);
+            vt = vt(:,indices);
             data(k,:) = vt;
             avg_data = mean(data,2);
         end
@@ -62,7 +67,7 @@ fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','R
 grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 4 107 4]);
 age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 6 107 6]);
 ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 7 107 7]);
-interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
+%interaction = readmatrix('Cobre_fluency_study_v2.xlsx', 'Sheet','regression','Range',[2 5 107 5]);
 %suvr = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 8 103 8]);
 pf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 9 107 9]));
 sf = zscore(readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range',[2 10 107 10]));
@@ -70,11 +75,17 @@ suvr_dis = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression','Range'
 
 %regressor = horzcat(fluency_ratio, grp);
 %regressor = horzcat(fluency_ratio, grp, interaction);
+interaction = grp.*sf;
 regressor = horzcat(sf, grp, interaction);
 covariates = horzcat(pf,age, ed, suvr_dis);
 X = horzcat(regressor, covariates);
+% Design matrices for the two groups
+X_nc = X(1:51,:);
+X_nc(:,2:3)=[];
+X_mci = X(52:end,:);
+X_mci(:,2:3)=[];
 
-% GENERATION OF THE FUNCTIONAL CONNECTIVITY MATRIX
+% CONNECTIVITY MATRIX (Full correlation)
 dirpath = dir(data_savedir);
 subpath = {dirpath.name}';
 subpath(ismember(subpath,{'.','..'})) = [];
@@ -83,10 +94,35 @@ for i=1:length(subpath)
     current = strcat(data_savedir,'\', sub);
     tc_data = load(current,'timeseries_region');
     tc = (tc_data.timeseries_region);
-    [pval, fcn_roi] = corrcoef(tc);
-    save(fullfile(fcn_savedir, sprintf('FCN_merged_%s.mat',sub)),'fcn_roi','pval');
+    [fcn_roi, pval] = corrcoef(tc);
+    save(fullfile(fcn_savedir, sprintf('FCN_merged_%s',sub)),'fcn_roi','pval');
 end
-% GENERATION OF THE RESPONSE VARIABLE
+% CONNECTIVITY MATRIX (Partial correlation)
+dirpath = dir(data_savedir);
+subpath = {dirpath.name}';
+subpath(ismember(subpath,{'.','..'})) = [];
+for i=1:length(subpath)
+    sub = subpath{i};
+    current = strcat(data_savedir,'\', sub);
+    tc_data = load(current,'timeseries_region');
+    tc = (tc_data.timeseries_region);
+    pcorr_roi = partialcorr(tc);
+    save(fullfile(pcn_savedir, sprintf('PCORR_merged_%s',sub)),'pcorr_roi');
+end
+
+% CONNECTIVITY MATRIX (Full correlation - Kendall's Tau)
+dirpath = dir(data_savedir);
+subpath = {dirpath.name}';
+subpath(ismember(subpath,{'.','..'})) = [];
+for i=1:length(subpath)
+    sub = subpath{i};
+    current = strcat(data_savedir,'\', sub);
+    tc_data = load(current,'timeseries_region');
+    tc = (tc_data.timeseries_region);
+    kcorr_roi = corr(tc, 'type', 'Kendall');
+    save(fullfile(kcn_savedir, sprintf('KendallTau_%s',sub)),'kcorr_roi');
+end
+% GENERATION OF THE RESPONSE VARIABLE (Full correlation)
 dirloc = dir(fcn_savedir);
 subloc = {dirloc.name}';
 subloc(ismember(subloc,{'.','..'})) = [];
@@ -94,37 +130,52 @@ for j = 1:length(subloc)
     sub = subloc{j};
     current = strcat(fcn_savedir,'\',sub);
     sub_fcn = load(current,'fcn_roi');
-    sub_fcn = sub_fcn.fcn_roi;
-    fcn_aud = getfc_v1(sub_fcn,1);
-    fcn_bas = getfc_v1(sub_fcn,2);
-    fcn_lecn = getfc_v1(sub_fcn,3);
-    fcn_lang = getfc_v1(sub_fcn,4);
-    fcn_mot = getfc_v1(sub_fcn,5);
-    fcn_prec = getfc_v1(sub_fcn,6);
-    fcn_recn = getfc_v1(sub_fcn,7);
-    fcn_sal = getfc_v1(sub_fcn,8);
-    fcn_visspa = getfc_v1(sub_fcn,9);
-    fcn_ddmn = getfc_v1(sub_fcn,10);
-    fcn_hvis = getfc_v1(sub_fcn,11);
-    fcn_psal = getfc_v1(sub_fcn,12);
-    fcn_pvis = getfc_v1(sub_fcn,13);
-    fcn_vdmn = getfc_v1(sub_fcn,14);
-    fcn_all = horzcat(fcn_aud,fcn_aud,fcn_bas,fcn_lecn,fcn_lang,fcn_mot,fcn_mot,fcn_prec,...
-        fcn_recn,fcn_sal,fcn_visspa,fcn_ddmn,fcn_hvis,fcn_psal,fcn_pvis,fcn_vdmn);
-    fcn_all_mean = horzcat(mean(fcn_aud),mean(fcn_bas),mean(fcn_lecn),...
-        mean(fcn_lang),mean(fcn_mot),mean(fcn_prec),mean(fcn_recn),...
-        mean(fcn_sal),mean(fcn_visspa),mean(fcn_ddmn),mean(fcn_hvis),mean(fcn_psal),...
-        mean(fcn_pvis),mean(fcn_vdmn));
-    Y(j,:) = abs(fcn_all);
-    Y_mean(j,:) = abs(fcn_all_mean);
+    sub_fcn = abs(sub_fcn.fcn_roi);
+    [Y_full(j,:), Y_full_avg(j,:)] = getfc_all(sub_fcn);
 end
 
-clearvars -except X Y Y_mean ;
+% GENERATION OF THE RESPONSE VARIABLE (Mutual information - Own)
+dirloc = dir(mi_savedir_own);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub = subloc{j};
+    current = strcat(mi_savedir,'\',sub);
+    sub_fcn = load(current,'MI_default');
+    sub_fcn = abs(sub_fcn.MI_default);
+    [Y_mi(j,:), Y_mi_avg(j,:)] = getfc_all(sub_fcn);
+end
+% GENERATION OF THE RESPONSE VARIABLE (Mutual information - Inbuilt)
+dirloc = dir(mi_savedir_inbuilt);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub = subloc{j};
+    current = strcat(mi_savedir_inbuilt,'\',sub);
+    sub_fcn = load(current,'MI');
+    sub_fcn = abs(sub_fcn.MI);
+    [Y_mi(j,:), Y_mi_avg(j,:)] = getfc_all(sub_fcn);
+end
+% GENERATION OF THE RESPONSE VARIABLE (Partial correlation)
+dirloc = dir(pcn_savedir);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub = subloc{j};
+    current = strcat(pcn_savedir,'\',sub);
+    sub_fcn = load(current,'pcorr_roi');
+    sub_fcn = abs(sub_fcn.pcorr_roi);
+    [Y_partial(j,:), Y_partial_avg(j,:)] = getfc_all(sub_fcn);
+end
+
+clearvars -except X X_mci X_nc Y_full Y_full_avg Y_partial Y_partial_avg;
+clearvars -except X_nc X_mci Y_full Y_partial;
+clearvars -except X X_mci X_nc Y_mi Y_mi_avg;
 % Fitting the regression model
 mlr_roi_model= struct;
-for k=1:size(Y_mean,2)
+for k=1:size(Y_mi_avg,2)
     fprintf('Fitting the linear regression model for rsn group %d...\n',k);
-    mlr_roi_model.lr_model{k,1} = fitlm(X,Y_mean(:,k),'RobustOpts','ols');
+    mlr_roi_model.lr_model{k,1} = fitlm(X,Y_mi_avg(:,k),'RobustOpts','ols');
     mlr_roi_model.coeff(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.Estimate;
     mlr_roi_model.pval(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.pValue;
     mlr_roi_model.tstat(k,:) = mlr_roi_model.lr_model{k,1}.Coefficients.tStat;
@@ -132,11 +183,12 @@ for k=1:size(Y_mean,2)
     mlr_roi_model.Rsquared_adjust(k,:) = mlr_roi_model.lr_model{k,1}.Rsquared.Adjusted;
     mlr_roi_model.Yfitted(:,k) = mlr_roi_model.lr_model{k,1}.Fitted;
     mlr_roi_model.residuals_raw(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Raw;
-    mlr_roi_model.residuals_std(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Raw;
+    mlr_roi_model.residuals_std(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Standardized;
+    mlr_roi_model.residuals_student(:,k) = mlr_roi_model.lr_model{k,1}.Residuals.Studentized;
     mlr_roi_model.ms_error(k,1) = mlr_roi_model.lr_model{k,1}.MSE;
 end
 mlr_roi_model.X = X;
-mlr_roi_model.Y = Y_mean;
+mlr_roi_model.Y = Y_mi_avg;
 %
 X1 = X(:,1:3);
 Y1 = mlr_roi_model.Yfitted;
@@ -193,14 +245,14 @@ legend({'Normal Cognition', 'MCI'}, 'Location','southoutside');
 hold off;
 % For language ROI
 figure;
-gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Y(:,8),mlr_roi_model_regressed.X(:,2));
-title('Salience fROI');
+gscatter(mlr_roi_model_regressed.X(:,1),mlr_roi_model_regressed.Yfitted(:,4),mlr_roi_model_regressed.X(:,2));
+title('Language fROI');
 ylabel('Mean ROI connectivity');
 xlabel('Semantic fluency (z-score)');
 hold on;
-plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,8),'-r','LineWidth',1);
+plot(mlr_roi_model_regressed.X(1:51,1),mlr_roi_model_regressed.Yfitted(1:51,4),'-r','LineWidth',1);
 legend('off');
-plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,8),'-c','LineWidth',1);
+plot(mlr_roi_model_regressed.X(52:end,1),mlr_roi_model_regressed.Yfitted(52:end,4),'-c','LineWidth',1);
 legend('off');
 legend({'NC', 'MCI'}, 'Location','southoutside');
 hold off;
@@ -247,6 +299,10 @@ hold off;
 %------------------------------------------------------------------------------%
 %                   Non-linear analysis : Randomforest regression
 %------------------------------------------------------------------------------%
+% Generating the cross validation partition
+
+Data = array2table(cv.X_train);
+Data.Yfit = cv.Y_train(:,1);
 t = templateTree('NumVariablesToSample','all',...
     'PredictorSelection','interaction-curvature','Surrogate','on');
 rng(1); % For reproducibility
@@ -262,14 +318,15 @@ b = TreeBagger(200,X,Y_mean(:,1),'Method','regression', ...
     'CategoricalPredictors',find(cat_var == 1), ...
     'MinLeafSize',100);
 
+Mdl = TreeBagger(30, Data, 'Yfit', ...
+    'Method', 'regression', 'PredictorSelection', 'curvature', ...
+    'Surrogate', 'on', 'OOBPredictorImportance', 'on');
 
-
-
-
-
-
-
-
+%Trial - 
+% The entire time series
+r_pearson = corrcoef(timeseries_region);
+r_spearmann = corr(timeseries_region,'type','Spearman', 'rows','complete');
+r_kendall = corr(timeseries_region, 'type','Kendall');
 
 
 
