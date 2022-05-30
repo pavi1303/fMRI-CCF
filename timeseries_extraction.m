@@ -282,15 +282,21 @@ end
 % -------------------------------------------------------------------------------- %
 %                   TIME SERIES EXTRACTION : INDIVIDUAL RSN NETWORKS
 % -------------------------------------------------------------------------------- %
+% All the directory locations
+pat_dir = 'W:\LRCBH\COBRE data';
+atlas_dir = 'W:\Atlas\Willard shirer atlas\fROIs_90\2.Individual';
 % Getting the list of all the subjects
-dirpath = dir(rootdir);
+dirpath = dir(pat_dir);
 subdir = [dirpath(:).isdir];
 subloc = {dirpath(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
-% Iterating throught the different functional regions
-cd(atlas_loc);
-files = dir('*.nii');
-region_list = extractfield(files,'name')';
+% Getting the different RSN groups
+cd(atlas_dir);
+atlaspath = dir(atlas_dir);
+rsndir = [atlaspath(:).isdir];
+rsngrp = {atlaspath(rsndir).name}';
+rsngrp(ismember(rsngrp,{'.','..'})) = [];
+clearvars -except pat_dir atlas_dir subloc rsngrp;
 % GENERATION OF THE REGION * TIME SERIES DATA
 for j = 1:length(subloc)
     suboi = subloc{j};
@@ -302,7 +308,7 @@ for j = 1:length(subloc)
     fprintf('Generating data for subject %s...\n',suboi);
     for i = 1:length(region_list)
         cd(atlas_loc);
-        region = load_untouch_nii(region_list{i,1});
+        region = load_nii(region_list{i,1});
         roi = single(region.img);
         [x, y, z] = size(roi);
         roi_temp = reshape(roi, [1,x*y*z]);
