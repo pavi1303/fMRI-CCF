@@ -285,16 +285,17 @@ end
 % All the directory locations
 pat_dir = 'W:\LRCBH\COBRE data';
 atlas_dir = 'W:\Atlas\Willard shirer atlas\fROIs_90\2.Individual';
-savedir = 'W:\LRCBH\Timeseries_data';
+savedir = 'W:\LRCBH\Timeseries_data\GM';
 % Loading the mask
 cd('W:\LRCBH\MNI_segmented');
-m = load_nii('GMWM_mask.nii');
+m = load_nii('c1MNI152_T1_2mm.nii');
 mask = single(m.img);
 % Getting the list of all the subjects
 dirpath = dir(pat_dir);
-subdir = [dirpath(:).isdir];
+subdir = [dirpath(:).isdir]; 
 subloc = {dirpath(subdir).name}';
 subloc(ismember(subloc,{'.','..'})) = [];
+subloc(84:106, :) = [];
 % Getting the different RSN groups
 cd(atlas_dir);
 atlaspath = dir(atlas_dir);
