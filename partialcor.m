@@ -1,4 +1,4 @@
-function pcorr = partialcorr(data)
+function pcorr = partialcor(data)
 pres_mat = inv(cov(data));
 for i=1:size(pres_mat)
     for j=1:size(pres_mat)

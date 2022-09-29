@@ -469,28 +469,25 @@ for j=1:length(list_of_files)
     data(j,:) = vt;
 end
 % Plotting the ks density curves to identify the best subset of patients
-cd('F:\LRCBH\Projects\COBRE\Results\Documents\Excel');
+cd('E:\LRCBH\Projects\COBRE\Results\Documents\Excel');
 %fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 3 107 3]);
-% pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 9 90 9]);
-% pf_avg = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 10 90 10]);
-% sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 11 90 11]);
-pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v3','Range',[2 9 44 9]);
-pf_avg = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v3','Range',[2 10 44 10]);
-sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v3','Range',[2 11 44 11]);
-[pf1, xi1] = ksdensity(pf(1:26, :));
-[pf2, xi2] = ksdensity(pf(27:44, :));
+pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 9 90 9]);
+pf_avg = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 10 90 10]);
+sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 11 90 11]);
+[pf1, xi1] = ksdensity(pf(1:44, :));
+[pf2, xi2] = ksdensity(pf(45:89, :));
 plot(xi1,pf1,xi2,pf2)
 lgd = legend('Control','MCI');
 title(lgd, 'Phonemic fluency')
 figure;
-[sf1, xi3] = ksdensity(sf(1:26, :));
-[sf2, xi4] = ksdensity(sf(27:43, :));
+[sf1, xi3] = ksdensity(sf(1:44, :));
+[sf2, xi4] = ksdensity(sf(45:89, :));
 plot(xi3,sf1,xi4,sf2)
 lgd = legend('Control','MCI');
 title(lgd, 'Semantic fluency')
 figure;
-[pf_avg1, xi5] = ksdensity(pf_avg(1:26, :));
-[pf_avg2, xi6] = ksdensity(pf_avg(27:43, :));
+[pf_avg1, xi5] = ksdensity(pf_avg(1:44, :));
+[pf_avg2, xi6] = ksdensity(pf_avg(45:89, :));
 plot(xi5,pf_avg1,xi6,pf_avg2)
 lgd = legend('Control','MCI');
 title(lgd, 'Mean Phonemic fluency')
@@ -498,15 +495,15 @@ title(lgd, 'Mean Phonemic fluency')
 figure;
 [sf_grp1, xi7] = ksdensity(sf(1:44, :));
 [pf_grp1, xi8] = ksdensity(pf_avg(1:44, :));
-plot(xi7,sf_grp1,xi8,pf_grp1)
+plot(xi3,sf_grp1,xi4,pf_grp1)
 lgd = legend('Semantic','Phonemic');
 title(lgd, 'Controls')
 figure;
 [sf_grp2, xi9] = ksdensity(sf(45:89, :));
 [pf_grp2, xi10] = ksdensity(pf_avg(45:89, :));
-plot(xi9,sf_grp2,xi10,pf_grp2)
-lgd = legend('Semantic','Phonemic');
-title(lgd, 'MCI')
+plot(xi5,pf_avg1,xi6,pf_avg2)
+lgd = legend('Control','MCI');
+title(lgd, 'Mean Phonemic fluency')
 
 % Testing the regression model
 mdl = fitlm(X, Y(:, 2));

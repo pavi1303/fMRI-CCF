@@ -1,16 +1,16 @@
 %------------------------------------------------------------------------------%
 %         DATA PREPARATION - WILLARD ATLAS BASED ANALYSIS
 %------------------------------------------------------------------------------%
-
-clear all       
+clc;
+clear all;    
 rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
 atlas_loc = 'E:\LRCBH\Atlas\Willard_with_overlap_2mm\1.Merged';
 data_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\1.Data_merged';
 fcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\2.Individual\1.Full_correlation';
 pcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\2.Individual\2.Partial_correlation';
 kcn_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\3.FCN\1.Merged\3.KendallTau';
-mi_savedir_own = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Own'
-mi_savedir_inbuilt = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Inbuilt'
+mi_savedir_own = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Own';
+mi_savedir_inbuilt = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\5.Regression\ROI_analysis\4.MI\1.Merged\MAT files\Inbuilt';
 
 % Getting the list of all the subjects
 dirpath = dir(rootdir);
@@ -106,7 +106,7 @@ for i=1:length(subpath)
     current = strcat(data_savedir,'\', sub);
     tc_data = load(current,'timeseries_region');
     tc = (tc_data.timeseries_region);
-    pcorr_roi = partialcorr(tc);
+    pcorr_roi = partialcor(tc);
     save(fullfile(pcn_savedir, sprintf('PCORR_merged_%s',sub)),'pcorr_roi');
 end
 
