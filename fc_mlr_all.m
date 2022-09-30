@@ -2,8 +2,7 @@
 %          WILLARD ROI ANALYSIS - FUNCTIONAL CONNECTIVITY
 %------------------------------------------------------------------------------%
 
-% Using the timeseries data and deriving the functional connectivity
-% matrices
+% GENERATION OF THE FUNCTIONAL CONNECTIVITY MATRICES
 % Include a switch statment to choose either the normalized or the
 % traditional time series
 clc;
@@ -11,6 +10,9 @@ clear all;
 close all;
 root_dir = 'F:\LRCBH\Timeseries_data_willard_ROI\Language';
 fcn_savedir = 'F:\LRCBH\Projects\COBRE\Results\FC_updated\FCN';
+excel_dir = 'F:\LRCBH\Projects\COBRE\Results\Documents\Excel';
+cd(excel_dir);
+order = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 17 90 17]);
 
 d = dir(root_dir);
 isub = [d(:).isdir];
@@ -49,7 +51,182 @@ for i =1:numel(subdirs)
     clear fcn_pearson fcn_spearman fcn_kendall mean_trs filenames;
 end
 
+% GENERATION OF THE RESPONSE VARIABLE
+dirloc = dir(saveloc_p);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub_fcn = load(strcat(saveloc_p,'\',subloc{j}),'fcn_pearson');
+    sub_fcn = sub_fcn.fcn_pearson;
+    Y_p(j,:) = abs(nonzeros(tril(sub_fcn, -1))');
+end
+Y_pearson = Y_p(order, :);
+clear Y_p dirloc subloc sub_fcn j
+dirloc = dir(saveloc_s);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub_fcn = load(strcat(saveloc_s,'\',subloc{j}),'fcn_spearman');
+    sub_fcn = sub_fcn.fcn_spearman;
+    Y_s(j,:) = abs(nonzeros(tril(sub_fcn, -1))');
+end
+Y_spearman = Y_s(order, :);
+clear Y_s dirloc subloc sub_fcn j
+dirloc = dir(saveloc_k);
+subloc = {dirloc.name}';
+subloc(ismember(subloc,{'.','..'})) = [];
+for j = 1:length(subloc)
+    sub_fcn = load(strcat(saveloc_k,'\',subloc{j}),'fcn_kendall');
+    sub_fcn = sub_fcn.fcn_kendall;
+    Y_k(j,:) = abs(nonzeros(tril(sub_fcn, -1))');
+end
+Y_kendall = Y_k(order, :);
+clear Y_k dirloc subloc sub_fcn j
+
+% GENERATION OF THE DESIGN MATRIX
+% Future variations might be to use the ratio instead, include the
+% interaction term, use the difference of the fluency scores
+% Create a function for the linear regression calculation and use that in
+% this code
+% I extracted these with the abs value of the FC. Do another version with
+% the actual positive and negative values
+cd('F:\LRCBH\Projects\COBRE\Results\Documents\Excel');
+pf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 9 90 9]);
+sf = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 11 90 11]);
+fluency_ratio = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 3 90 3]);
+grp = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 4 90 4]);
+
+age = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 6 90 6]);
+ed = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 7 90 7]);
+gen = readmatrix('Cobre_fluency_study_v2.xlsx','Sheet','regression_v2','Range',[2 16 90 16]);
+
+X = horzcat(grp, pf, sf, age, ed, gen);
+X = X(order, :);
+
+clearvars -except X Y_pearson Y_spearman Y_kendall order
+
+% Fitting the regression model
+mlr_L1 = struct;
+for k=1:size(Y_pearson,2)
+    mlr_LI.lr_model{k,1} = fitlm(X,Y_pearson(:,k),'RobustOpts','ols');
+    mlr_LI.coeff(k,:) = mlr_LI.lr_model{k,1}.Coefficients.Estimate;
+    mlr_LI.pval(k,:) = mlr_LI.lr_model{k,1}.Coefficients.pValue;
+    mlr_LI.tstat(k,:) = mlr_LI.lr_model{k,1}.Coefficients.tStat;
+    mlr_LI.Rsquared_orig(k,:) = mlr_LI.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_LI.Rsquared_adjust(k,:) = mlr_LI.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_LI.Yfitted(:,k) = mlr_LI.lr_model{k,1}.Fitted;
+    mlr_LI.residuals_raw(:,k) = mlr_LI.lr_model{k,1}.Residuals.Raw;
+    mlr_LI.residuals_std(:,k) = mlr_LI.lr_model{k,1}.Residuals.Standardized;
+    mlr_LI.residuals_student(:,k) = mlr_LI.lr_model{k,1}.Residuals.Studentized;
+    mlr_LI.ms_error(k,1) = mlr_LI.lr_model{k,1}.MSE;
+end
+mlr_LI.X = X;
+mlr_LI.Y = Y_pearson;
+%
+X1 = X(:,1:3);
+Y1 = mlr_LI.Yfitted;
+clearvars -except X1 Y1 mlr_L1
+
+mlr_L2 = struct;
+for k=1:size(Y1,2)
+    mlr_L2.lr_model{k,1} = fitlm(X1,Y1(:,k),'RobustOpts','ols');
+    mlr_L2.coeff(k,:) = mlr_L2.lr_model{k,1}.Coefficients.Estimate;
+    mlr_L2.pval(k,:) = mlr_L2.lr_model{k,1}.Coefficients.pValue;
+    mlr_L2.tstat(k,:) = mlr_L2.lr_model{k,1}.Coefficients.tStat;
+    mlr_L2.Rsquared_orig(k,:) = mlr_L2.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_L2.Rsquared_adjust(k,:) = mlr_L2.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_L2.Yfitted(:,k) = mlr_L2.lr_model{k,1}.Fitted;
+    mlr_L2.residuals_raw(:,k) = mlr_L2.lr_model{k,1}.Residuals.Raw;
+    mlr_L2.residuals_std(:,k) = mlr_L2.lr_model{k,1}.Residuals.Raw;
+    mlr_L2.ms_error(k,1) = mlr_L2.lr_model{k,1}.MSE;
+end
+mlr_L2.X = X1;
+mlr_L2.Y = Y1;
+tstat(:,1) = mlr_LI.tstat(:,4);
+tstat(:,2) = mlr_L2.tstat(:,4);
+pval(:,1) = mlr_LI.pval(:,4);
+pval(:,2) = mlr_L2.pval(:,4);
+
+tstat_pf(:,1) = mlr_LI.tstat(:,3);
+tstat_pf(:,2) = mlr_L2.tstat(:,3);
+
+%Converting the linear regression to a function
+%Convert the arrays to table but get the input names for each of the levels
+%from the user or more simply just get the variables to remove/to retain in
+%level 2 and the IV of interest
+%VARIABLES TO SAVE
+% 1. Yfitted values
+% 2. X
+% 3. Y
+% 4. T statistic
+% 5. Beta values
+% 6. p values
+% 7. adjusted R2
+% 8. AIC
+% 9. RMSE
+% 10. Residuals raw
+% 11. Residuals std
+% 12. Leverage values ( X values greater than 3 times the mean leverage
+% value is possibly an outlier/extreme value)
+% VARIABLES TO COMPARE ACROSS THE 2 LEVELS
+% 1. AIC
+% 2. RMSE
+% 3. Adjusted R2
+% 4. T statistic (of the interested ind var)
+% 5. p values (of the interested ind var)
+
+function [] = mlr_2level(x, y)
+
+mlr_L1 = struct;
+for k=1:size(y,2)
+    mlr_LI.lr_model{k,1} = fitlm(x,y(:,k),'RobustOpts','ols');
+    mlr_LI.beta(k,:) = mlr_LI.lr_model{k,1}.Coefficients.Estimate;
+    mlr_LI.pval(k,:) = mlr_LI.lr_model{k,1}.Coefficients.pValue;
+    mlr_LI.tstat(k,:) = mlr_LI.lr_model{k,1}.Coefficients.tStat;
+    mlr_LI.Rsquared_orig(k,:) = mlr_LI.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_LI.Rsquared_adjust(k,:) = mlr_LI.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_LI.Yfitted(:,k) = mlr_LI.lr_model{k,1}.Fitted;
+    mlr_LI.residuals_raw(:,k) = mlr_LI.lr_model{k,1}.Residuals.Raw;
+    mlr_LI.residuals_std(:,k) = mlr_LI.lr_model{k,1}.Residuals.Standardized;
+    mlr_LI.residuals_student(:,k) = mlr_LI.lr_model{k,1}.Residuals.Studentized;
+    mlr_LI.ms_error(k,1) = mlr_LI.lr_model{k,1}.MSE;
+end
+mlr_LI.X = X;
+mlr_LI.Y = Y_pearson;
+%
+X1 = X(:,1:3);
+Y1 = mlr_LI.Yfitted;
+clearvars -except X1 Y1 mlr_L1
+
+mlr_L2 = struct;
+for k=1:size(Y1,2)
+    mlr_L2.lr_model{k,1} = fitlm(X1,Y1(:,k),'RobustOpts','ols');
+    mlr_L2.coeff(k,:) = mlr_L2.lr_model{k,1}.Coefficients.Estimate;
+    mlr_L2.pval(k,:) = mlr_L2.lr_model{k,1}.Coefficients.pValue;
+    mlr_L2.tstat(k,:) = mlr_L2.lr_model{k,1}.Coefficients.tStat;
+    mlr_L2.Rsquared_orig(k,:) = mlr_L2.lr_model{k,1}.Rsquared.Ordinary;
+    mlr_L2.Rsquared_adjust(k,:) = mlr_L2.lr_model{k,1}.Rsquared.Adjusted;
+    mlr_L2.Yfitted(:,k) = mlr_L2.lr_model{k,1}.Fitted;
+    mlr_L2.residuals_raw(:,k) = mlr_L2.lr_model{k,1}.Residuals.Raw;
+    mlr_L2.residuals_std(:,k) = mlr_L2.lr_model{k,1}.Residuals.Raw;
+    mlr_L2.ms_error(k,1) = mlr_L2.lr_model{k,1}.MSE;
+end
+mlr_L2.X = X1;
+mlr_L2.Y = Y1;
+tstat(:,1) = mlr_LI.tstat(:,4);
+tstat(:,2) = mlr_L2.tstat(:,4);
+pval(:,1) = mlr_LI.pval(:,4);
+pval(:,2) = mlr_L2.pval(:,4);
 
 
+
+
+
+end
+
+
+
+leverage = mlr_L2.lr_model{1,1}.Diagnostics.Leverage;
+l_mean = mean(leverage);
 
 
