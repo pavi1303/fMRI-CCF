@@ -6,7 +6,7 @@ tic
 %                     IMPORTING LIST OF USEFUL DIRECTORIES
 %------------------------------------------------------------------------------%
 
-rootdir = 'E:\LRCBH\Data\COBRE-MNI\Individual_data\Useful';
+rootdir = 'W:\LRCBH\COBRE_rsfMRI\fMRI\Useful';
 pca_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\1.PCA\Useful';
 ica_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_50_results_new';
 dr_savedir = 'E:\LRCBH\Projects\COBRE\Results\Matlab\ICA_100_results\2.DR';
