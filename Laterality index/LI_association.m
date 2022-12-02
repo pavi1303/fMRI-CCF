@@ -280,13 +280,7 @@ for sub = 3:length(pat_list)
     sub_trs = load(pat_list(sub).name).ss_tc;
     sub_trs(noise_idx, :) = [];
     fc = corrcoef(sub_trs');
-    % Replace this with using the ltril instead to match the indices
-    % identified using the function later
     [~, ~, fc_mat(sub-2, :)] = find(tril(fc, -1));
-%     At = triu(fc, 1).';
-%     m  = tril(true(size(At)), -1);
-%     fc_vec  = At(m).'; % Row vector of the correlation coefficient values
-%     fc_mat(sub-2, :) = fc_vec;
 end
 fc_mat = fc_mat(1:length(pat_list)-2,:); %Removing the unwanted entries
 fc_mat = fc_mat(order, :); % Each column will be part of the design matrix
